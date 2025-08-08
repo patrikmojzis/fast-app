@@ -9,7 +9,7 @@ import aiohttp
 import jwt
 import jwt.algorithms
 
-from fast_app.common.cache import Cache
+from fast_app.core.cache import Cache
 from fast_app.exceptions.apple_auth_exceptions import (
     AppleInvalidSignatureError,
     ApplePublicKeyNotFoundError,

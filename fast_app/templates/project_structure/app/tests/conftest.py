@@ -25,7 +25,7 @@ async def setup_session():
     from fast_app.utils.database_cache import DatabaseCache
     DatabaseCache.flush()
 
-    from fast_app.common.cache import Cache
+    from fast_app.core.cache import Cache
     Cache.flush()
 
     yield

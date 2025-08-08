@@ -1,4 +1,4 @@
-from fast_app.common.broadcasting import BroadcastEvent, WebsocketEvent, redis_broadcast_client
+from fast_app.core.broadcasting import BroadcastEvent, WebsocketEvent, redis_broadcast_client
 from quart import websocket
 import asyncio
 

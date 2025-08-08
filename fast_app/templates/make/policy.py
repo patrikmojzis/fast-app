@@ -1,8 +1,8 @@
-from fast_app.policy_base import Policy
+from fast_app import Policy
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from fast_app.model_base import Model
+    from fast_app import Model
 
 
 class Policy(Policy):

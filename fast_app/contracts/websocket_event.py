@@ -4,7 +4,6 @@ from typing import Any, Optional
 import redis.asyncio as redis
 import os
 import time
-from fast_app import Resource
 from fast_app.utils.serialisation import pascal_case_to_snake_case
 
 class WebsocketEvent(BaseModel):

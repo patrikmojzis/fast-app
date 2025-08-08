@@ -7,9 +7,13 @@ from quart import g
 from bson import ObjectId
 
 from app.models.auth import Auth
-from fast_app import get_bearer_auth_token, UnauthorisedException
-from fast_app.common.middleware import Middleware
-from fast_app.common.auth.jwt_auth import decode_token, ACCESS_TOKEN_TYPE
+from fast_app import (
+    Middleware,
+    get_bearer_auth_token,
+    UnauthorisedException,
+    decode_token,
+    ACCESS_TOKEN_TYPE,
+)
 from fast_app.exceptions.auth_exceptions import AuthException
 
 

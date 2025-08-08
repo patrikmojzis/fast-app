@@ -114,9 +114,9 @@ async def paginate_all(model: 'Model', resource: 'Resource', *, query: dict = No
             'data': await resource(result).dump()
         })
 
-def validate_request(schema: 'BaseModel', *, exclude_unset: bool = False):
+async def validate_request(schema: 'BaseModel', *, exclude_unset: bool = False):
     """Validate the request body against the schema.
-    
+
     Args:
         schema: The schema to validate the request body against.
         exclude_unset: Whether to exclude unset fields from the validated data.
@@ -128,7 +128,7 @@ def validate_request(schema: 'BaseModel', *, exclude_unset: bool = False):
         UnprocessableEntityException: If the request body is invalid.
     """
     try:
-        json_data = request.get_json()
+        json_data = await request.get_json()
         validated = schema(**json_data).model_dump(exclude_unset=exclude_unset)
         g.validated = validated
     except ValidationError as e:

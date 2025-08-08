@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING
 
-from fast_app.notification_channel_base import NotificationChannel
-from fast_app.common.mail import Mail
+from fast_app import NotificationChannel
+from fast_app.integrations.notification_channels.mail import Mail
 
 if TYPE_CHECKING:
     from app.models.user import User
-    from fast_app.notification_base import Notification
+    from fast_app import Notification
 
 
 class MailChannel(NotificationChannel):

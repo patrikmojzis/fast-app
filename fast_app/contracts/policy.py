@@ -2,7 +2,7 @@ from abc import ABC
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from fast_app.model_base import Model
+    from fast_app import Model
 
 class Policy(ABC):
 
@@ -26,4 +26,5 @@ class Policy(ABC):
             Optional[bool]: True to grant, False to deny, None to continue
         """
         return None
+
 

@@ -7,11 +7,9 @@ from bson import ObjectId
 
 from app.models.user import User
 from app.http_files.middlewares.auth_middleware import protected_route
-from fast_app import handle_exceptions
 from fast_app.exceptions.http_exceptions import HttpException, UnauthorisedException, NotFoundException, UnprocessableEntityException
-from fast_app.common.api import validate_request, get_client_ip
-from fast_app.common.storage import Storage
-from fast_app.common.downloads import Downloads
+from fast_app.core.api import validate_request, get_client_ip
+from fast_app.core.storage import Storage
 from fast_app.utils.file_utils import get_mime_type, format_file_size, sanitize_filename
 
 

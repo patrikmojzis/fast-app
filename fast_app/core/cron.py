@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import os
+import asyncio
+import os
 from datetime import datetime, timezone
-from typing import Any, Callable, TypedDict, NotRequired
+from typing import Any, Callable, NotRequired, TypedDict
 
 from redis import asyncio as aioredis
 
-from fast_app.common.queue import queue
 from fast_app.config import REDIS_CRON_DB
+from fast_app.core.queue import queue
 
 
 class CronJobSpec(TypedDict):

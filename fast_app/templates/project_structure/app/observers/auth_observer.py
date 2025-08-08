@@ -1,9 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from typing import TYPE_CHECKING
 
-from fast_app.observer_base import Observer
-from fast_app.common.auth.jwt_auth import create_refresh_token, REFRESH_TOKEN_LIFETIME
-from fast_app.common.api import get_client_ip
+from fast_app import Observer, create_refresh_token, REFRESH_TOKEN_LIFETIME, get_client_ip
 from quart import has_request_context, request
 
 
@@ -29,3 +27,4 @@ class AuthObserver(Observer):
 
         auth.refresh_token = create_refresh_token(auth.user_id)
         auth.expires_at = datetime.now() + timedelta(seconds=REFRESH_TOKEN_LIFETIME)        
+

@@ -4,7 +4,8 @@ from typing import Any, Callable, Awaitable
 from functools import wraps
 
 from quart import jsonify
-from fast_app.common.middleware import Middleware
+
+from fast_app.contracts.middleware import Middleware
 from fast_app.exceptions.http_exceptions import HttpException, ServerErrorException
 from fast_app.exceptions.common_exceptions import AppException
 from fast_app.exceptions.model_exceptions import ModelException

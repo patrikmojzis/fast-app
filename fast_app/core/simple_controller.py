@@ -4,8 +4,8 @@ from bson import ObjectId
 from quart import jsonify, g
 
 from fast_app.decorators.middleware_decorator import middleware
-from fast_app.middlewares.etag_middleware import EtagMiddleware
-from fast_app.common.api import paginate_all, validate_request
+from fast_app.core.middlewares import EtagMiddleware
+from fast_app.core.api import paginate_all, validate_request
 from fast_app.exceptions.http_exceptions import HttpException, UnprocessableEntityException, UnauthorisedException
 
 if TYPE_CHECKING:

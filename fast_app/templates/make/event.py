@@ -1,4 +1,4 @@
-from fast_app.event_base import EventBase
+from fast_app import EventBase
 
 
 class Event(EventBase):

@@ -1,8 +1,8 @@
-from fast_app.observer_base import Observer
+from fast_app import Observer
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from fast_app.model_base import Model
+    from fast_app import Model
 
 
 class Observer(Observer):

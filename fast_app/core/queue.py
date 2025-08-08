@@ -7,7 +7,6 @@ from typing import Callable
 from redis import Redis
 from rq import Queue
 
-from fast_app.app_provider import boot
 from fast_app.config import REDIS_QUEUE_DB
 from fast_app.application import Application
 
@@ -48,7 +47,8 @@ def run_async(ctx: contextvars.Context, app: Application, func: Callable, *args,
     """
     # Preserves the application state
     if app.is_booted():
-        boot(**app.get_boot_args())  
+        from fast_app.app_provider import boot
+        boot(**app.get_boot_args())
     
     # Run the function within the captured context
     def run_in_context():
@@ -67,7 +67,8 @@ def run_sync(ctx: contextvars.Context, app: Application, func: Callable, *args, 
     """
     # Preserves the application state
     if app.is_booted():
-        boot(**app.get_boot_args())  
+        from fast_app.app_provider import boot
+        boot(**app.get_boot_args())
     
     # Execute with the original context (preserves ContextVars like locale)
     ctx.run(func, *args, **kwargs)

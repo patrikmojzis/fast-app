@@ -1,9 +1,8 @@
-from fast_app.notification_base import Notification
+from fast_app import Notification
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from fast_app.model_base import Model
-    from fast_app.notification_channel_base import NotificationChannel
+    from fast_app import Model, NotificationChannel
 
 
 class Notification(Notification):

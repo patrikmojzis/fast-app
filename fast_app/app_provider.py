@@ -7,17 +7,13 @@ from typing import Any, Dict, List, Type, Optional
 from dotenv import load_dotenv
 
 from fast_app.utils.logging import setup_logging
-from fast_app.model_base import Model
-from fast_app.observer_base import Observer
-from fast_app.policy_base import Policy
-from fast_app.decorators.model_decorators import register_observer, register_policy
+from fast_app import Model, Observer, Policy, Event, EventListener
+from fast_app.decorators import register_observer, register_policy
 from fast_app.application import Application
-from fast_app.event_base import Event
-from fast_app.event_listener_base import EventListener
 from fast_app.utils.autodiscovery.event_autodiscovery import autodiscover_events
-from fast_app.utils.env_utils import configure_env, configure_events
-from fast_app.common.storage import Storage
-from fast_app.common.storage_drivers import get_builtin_storage_drivers
+from fast_app.utils.env_utils import configure_env
+from fast_app.core.storage import Storage
+from fast_app.core.storage_drivers import get_builtin_storage_drivers
 from fast_app.utils.autodiscovery.model_autodiscovery import autodiscover_models
 
 def boot(*,

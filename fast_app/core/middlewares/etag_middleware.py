@@ -4,7 +4,8 @@ from typing import Any, Callable, Awaitable
 from functools import wraps
 
 from quart import make_response, request
-from fast_app.common.middleware import Middleware
+
+from fast_app.contracts.middleware import Middleware
 
 
 class EtagMiddleware(Middleware):

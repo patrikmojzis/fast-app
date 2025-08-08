@@ -1,4 +1,4 @@
-from fast_app.event_listener_base import EventListener
+from fast_app import EventListener
 
 
 class Listener(EventListener):
