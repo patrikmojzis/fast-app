@@ -1,0 +1,55 @@
+{
+  "messages": {
+    "welcome": "¡Bienvenido a nuestra aplicación!",
+    "greeting": "¡Hola, {name}! ¡Buenos {time}!",
+    "goodbye": "Adiós, {name}. ¡Hasta pronto!",
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "update": "Actualizar"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "register": "Registrarse",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "remember_me": "Recordarme",
+    "forgot_password": "¿Olvidaste tu contraseña?",
+    "reset_password": "Restablecer contraseña",
+    "invalid_credentials": "Email o contraseña inválidos",
+    "login_successful": "Inicio de sesión exitoso",
+    "logout_successful": "Cierre de sesión exitoso"
+  },
+  "validation": {
+    "required": "El campo {field} es obligatorio",
+    "email": "El campo {field} debe ser una dirección de correo válida",
+    "min_length": "El campo {field} debe tener al menos {min} caracteres",
+    "max_length": "El campo {field} no debe exceder {max} caracteres",
+    "numeric": "El campo {field} debe ser un número",
+    "confirmed": "La confirmación del campo {field} no coincide"
+  },
+  "errors": {
+    "404": "Página no encontrada",
+    "500": "Error interno del servidor",
+    "403": "Acceso prohibido",
+    "401": "Acceso no autorizado",
+    "not_found": "{item} no encontrado",
+    "already_exists": "{item} ya existe",
+    "operation_failed": "Operación falló: {reason}"
+  },
+  "pagination": {
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "showing": "Mostrando {from} a {to} de {total} resultados",
+    "no_results": "No se encontraron resultados"
+  },
+  "actions": {
+    "confirm_delete": "¿Estás seguro de que quieres eliminar {item}?",
+    "operation_successful": "{action} completado exitosamente",
+    "operation_failed": "{action} falló"
+  }
+}

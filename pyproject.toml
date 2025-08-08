@@ -1,0 +1,161 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fast-app"
+version = "0.1.0"
+description = "A Laravel-inspired package for rapid Python application development"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Patrik Mojzis", email = "patrikm53@gmail.com"}
+]
+maintainers = [
+    {name = "Patrik Mojzis", email = "patrikm53@gmail.com"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Database",
+    "Framework :: FastAPI",
+]
+keywords = ["framework", "laravel", "python", "development", "rapid", "mongodb", "decorators", "fastapi"]
+requires-python = ">=3.12"
+dependencies = [
+    "motor>=3.7.0",
+    "rq>=2.4.0",
+    "quart>=0.20.0",
+    "redis>=6.2.0",
+    "markdown>=3.8.2",
+    "aiohttp>=3.12.0",
+    "quart-cors>=0.8.0",
+    "exponent_server_sdk>=2.1.0",
+    "quart>=0.20.0",
+    "python-dotenv>=1.1.1",
+    "typing_extensions>=4.0.0",
+    "python-dateutil>=2.8.0",
+    "pydantic>=1.8.0",
+    "PyJWT>=2.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-asyncio>=0.20.0",
+    "Faker>=15.0.0",
+    "factory_boy>=3.2.0",
+]
+
+[project.scripts]
+fast-app = "fast_app.cli.main:main"
+
+[project.urls]
+Homepage = "https://fast-app.patrikmojzis.com"
+Documentation = "https://fast-app.patrikmojzis.com"
+Repository = "https://github.com/patrikmojzis/fast-app"
+"Bug Reports" = "https://github.com/patrikmojzis/fast-app/issues"
+Changelog = "https://github.com/patrikmojzis/fast-app/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+include = ["fast_app*"]
+
+[tool.setuptools.package-data]
+fast_app = ["py.typed"]
+
+# Black formatting
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+# isort import sorting
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["fast_app"]
+
+# pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=fast_app",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+
+# mypy type checking
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pymongo.*",
+    "redis.*",
+]
+ignore_missing_imports = true
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["fast_app"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
