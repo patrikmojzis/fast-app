@@ -2,7 +2,7 @@ from abc import ABC
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from fast_app.model_base import Model
+    from fast_app import Model
 
 class Observer(ABC):
 
@@ -23,3 +23,4 @@ class Observer(ABC):
 
     async def on_deleted(self, model: 'Model'):
         pass
+

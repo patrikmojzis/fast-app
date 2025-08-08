@@ -17,7 +17,7 @@ def _get_event_listeners(event: 'Event') -> Tuple[Optional[List[Type['EventListe
         Tuple of (listeners_list, event_name) or (None, event_name) if invalid
     """
     app = Application()
-    event_name = event.get_event_name()
+    event_name = event.get_event_type()
     
     if not app.are_events_configured():
         print("⚠️ Application not configured for events")
@@ -47,7 +47,7 @@ async def _process_event_listener(listener_class: Type['EventListener'], event_i
         return
     
     listener_name = listener_class.__name__
-    event_name = event_instance.get_event_name()
+    event_name = event_instance.get_event_type()
     
     try:
         # Instantiate and process the listener

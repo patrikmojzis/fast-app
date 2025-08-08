@@ -6,7 +6,7 @@ import hashlib
 
 import aiohttp
 
-from fast_app.common.cache import Cache
+from fast_app.core.cache import Cache
 from fast_app.exceptions.google_auth_exceptions import (
     GoogleApiError,
     GoogleInvalidTokenError,

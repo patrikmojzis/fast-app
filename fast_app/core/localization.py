@@ -9,7 +9,7 @@ Core principles:
 - Thread-safe context-aware locale switching
 
 Usage:
-    from fast_app.common.localization import __, set_locale, get_locale
+    from fast_app.core.localization import __, set_locale, get_locale
     
     __('messages.welcome')                              # Basic translation
     __('messages.greeting', {'name': 'John'})          # With parameters  

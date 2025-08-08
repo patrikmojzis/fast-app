@@ -1,8 +1,9 @@
+"""Built-in storage drivers shipped with FastApp."""
+
 from typing import Dict, Type
 
 from fast_app.contracts.storage_driver import StorageDriver
 from .disk_driver import DiskDriver
-from .boto3_driver import Boto3Driver
 
 
 def get_builtin_storage_drivers() -> Dict[str, Type[StorageDriver]]:
@@ -12,7 +13,6 @@ def get_builtin_storage_drivers() -> Dict[str, Type[StorageDriver]]:
     """
     return {
         "disk": DiskDriver,
-        "boto3": Boto3Driver,
     }
 
 

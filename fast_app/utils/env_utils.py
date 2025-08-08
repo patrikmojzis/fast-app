@@ -2,8 +2,7 @@ import os
 from dotenv import load_dotenv
 from typing import Dict, List, Type, Optional
 from fast_app.application import Application
-from fast_app.event_base import Event
-from fast_app.event_listener_base import EventListener
+from fast_app import Event, EventListener
 from fast_app.utils.autodiscovery.event_autodiscovery import autodiscover_events
 
 

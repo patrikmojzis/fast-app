@@ -11,7 +11,7 @@ from fast_app.database.mongo import get_db
 from fast_app.decorators.db_cache_decorator import cached
 from fast_app.exceptions.common_exceptions import DatabaseNotInitializedException
 from fast_app.exceptions.model_exceptions import ModelNotFoundException
-from fast_app.policy_base import Policy
+from fast_app.contracts.policy import Policy
 from fast_app.utils.serialisation import serialise
 from fast_app.utils.query_builder import QueryBuilder
 from fast_app.utils.model_utils import build_search_query_from_string
@@ -452,3 +452,4 @@ class Model():
             return []
 
         return await child_model.find({child_key: self._get_object_id(parent_key)}, sort=[("_id", -1)])
+

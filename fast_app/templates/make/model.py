@@ -1,4 +1,4 @@
-from fast_app.model_base import Model
+from fast_app import Model
 
 
 class Model(Model):

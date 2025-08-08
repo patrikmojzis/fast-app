@@ -3,9 +3,8 @@ from typing import TYPE_CHECKING, Optional
 
 from bson import ObjectId
 
-from fast_app import Model, register_observer
+from fast_app import Model, register_observer, create_access_token
 from app.observers.auth_observer import AuthObserver
-from fast_app.common.auth.jwt_auth import create_access_token
 
 if TYPE_CHECKING:
     from app.models.user import User

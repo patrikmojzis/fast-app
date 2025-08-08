@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from fast_app.notification_base import Notification
-    from fast_app.model_base import Model
+    from fast_app import Model, Notification
 
 class NotificationChannel(ABC):
     

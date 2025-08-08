@@ -1,5 +1,6 @@
 from functools import wraps
-from fast_app.common.stopwatch import Stopwatch
+
+from fast_app.core.stopwatch import Stopwatch
 
 def stopwatch(func=None, *, logger=None):
     """

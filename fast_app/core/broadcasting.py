@@ -4,9 +4,11 @@ from typing import TYPE_CHECKING, Any, Optional
 import redis.asyncio as redis
 import os
 import time
-from fast_app import Resource
 from fast_app.contracts.broadcast_channel import BroadcastChannel
-from fast_app.utils.broadcast_utils import convert_broadcast_event_to_websocket_event, redis_broadcast_client
+from fast_app.utils.broadcast_utils import (
+    convert_broadcast_event_to_websocket_event,
+    redis_broadcast_client,
+)
 
 if TYPE_CHECKING:
     from fast_app.contracts.broadcast_event import BroadcastEvent

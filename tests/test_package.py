@@ -3,6 +3,7 @@ Basic package tests to ensure FastApp can be imported and basic functionality wo
 """
 
 import pytest
+import asyncio
 import fast_app
 
 
@@ -32,6 +33,6 @@ def test_package_metadata():
 @pytest.mark.asyncio
 async def test_async_functionality():
     """Test that async functionality is available."""
-    # This is a placeholder for actual async tests
-    # You can expand this when you fix the import issues
-    assert True  # Placeholder
+    # Placeholder async test ensuring event loop works
+    await asyncio.sleep(0)
+    assert True

@@ -7,10 +7,9 @@ from bson import ObjectId
 from app.models.user import User
 from app.models.auth import Auth
 from app.http_files.middlewares.auth_middleware import protected_route
-from fast_app import handle_exceptions
 from fast_app.exceptions.http_exceptions import HttpException, UnauthorisedException
 from app.http_files.schemas.auth_refresh_schema import AuthRefreshSchema
-from fast_app.common.api import validate_request, get_client_ip
+from fast_app.core.api import validate_request, get_client_ip
 from app.http_files.resources.auth_resource import AuthResource
 
 
@@ -65,4 +64,5 @@ async def logout_all():
     await g.get('auth').revoke_all()
 
     return Response(status=204)
+
 

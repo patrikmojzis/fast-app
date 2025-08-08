@@ -2,9 +2,9 @@ from typing import Any, Callable, Awaitable
 
 from quart import g
 
-from fast_app.common.middleware import Middleware
-from fast_app.common.api import get_client_ip
-from fast_app.common.cache import Cache
+from fast_app.contracts.middleware import Middleware
+from fast_app.core.api import get_client_ip
+from fast_app.core.cache import Cache
 from fast_app.exceptions.http_exceptions import TooManyRequestsException
 
 

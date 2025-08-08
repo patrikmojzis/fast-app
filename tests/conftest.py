@@ -1,27 +1,21 @@
-"""
-Pytest configuration and shared fixtures for FastApp tests.
-"""
+"""Pytest configuration and shared fixtures for FastApp tests."""
 
 import pytest
-from faker import Faker
-
-fake = Faker()
 
 
 @pytest.fixture
 def sample_data():
     """Provide sample data for tests."""
     return {
-        "name": fake.name(),
-        "email": fake.email(),
-        "company": fake.company(),
+        "name": "Jane Doe",
+        "email": "jane@example.com",
+        "company": "ACME",
     }
 
 
 @pytest.fixture
 def mock_database():
-    """Mock database fixture for testing."""
-    # This can be expanded when you set up actual database mocking
+    """Mock database fixture placeholder."""
     pass
 
 

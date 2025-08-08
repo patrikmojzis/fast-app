@@ -2,12 +2,12 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from fast_app.notification_channel_base import NotificationChannel
-from fast_app.common.telegram import send_via_telegram
+from fast_app import NotificationChannel
+from fast_app.integrations.notification_channels.telegram import send_via_telegram
 
 if TYPE_CHECKING:
     from app.models.user import User
-    from fast_app.notification_base import Notification
+    from fast_app import Notification
 
 
 class TelegramChannel(NotificationChannel):
@@ -18,3 +18,4 @@ class TelegramChannel(NotificationChannel):
                 os.getenv('TELEGRAM_BOT_TOKEN'),
                 chat_id
                 ) 
+

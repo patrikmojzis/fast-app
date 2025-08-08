@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from quart import jsonify, Response
 
-from fast_app.model_base import Model
+from fast_app.contracts.model import Model
 from fast_app.utils.serialisation import serialise
 
 
@@ -38,3 +38,4 @@ class Resource(ABC):
         Set up the resource to be dumped.
         """
         return data.dict()
+

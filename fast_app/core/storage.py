@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional, Union, List, IO, Type
 from datetime import datetime
 
 from fast_app.contracts.storage_driver import StorageDriver
-from fast_app.common.storage_drivers import get_builtin_storage_drivers
+from fast_app.core.storage_drivers import get_builtin_storage_drivers
 
 
 class Storage:
