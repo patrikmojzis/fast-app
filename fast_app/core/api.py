@@ -65,10 +65,9 @@ class PaginationQuery(BaseModel):
     sort_direction: Optional[Literal["asc", "desc"]] = Field(None)
 
 
-# TODO: refactor query and g.expand_query, used g.expand_query is used for passing filters from controller
-async def paginate_all(model: 'Model', resource: 'Resource', *, query: dict = None):
-    if query is None:
-        query = {}
+async def search_all(model: 'Model', resource: 'Resource', *, query_param: dict | None = None):
+    if query_param is None:
+        query_param = {}
 
     params = validate_query(PaginationQuery)
     page = params["page"]
@@ -81,38 +80,54 @@ async def paginate_all(model: 'Model', resource: 'Resource', *, query: dict = No
     if sort_by and sort_direction:
         sort = [(sort_by, 1 if sort_direction == "asc" else -1)]  # user requested sort
     else:
-        sort = g.get('sort', [('_id', -1)]) #  sort modified internally or default sort
-        
-    # Return search results if search is provided
-    if search:
-        res = await model.search(search, per_page, (page - 1) * per_page, sort=sort);
-        return jsonify({
-            "meta": res["meta"],
-            "data": await resource(res["data"]).dump()
-        })
-        
+        sort = g.get('sort', [('_id', -1)])  # sort modified internally or default sort
+
+    from fast_app.utils.model_utils import build_search_query_from_string
+
+    search_filter = build_search_query_from_string(search, model.all_fields())
+    if query_param:
+        search_filter = {"$and": [query_param, search_filter]}
+
+    res = await model.search(search_filter, per_page, (page - 1) * per_page, sort=sort)
+    return jsonify({
+        "meta": res["meta"],
+        "data": await resource(res["data"]).dump(),
+    })
+
+
+async def paginate_all(model: 'Model', resource: 'Resource', *, query_param: dict | None = None):
+    if query_param is None:
+        query_param = {}
+
+    params = validate_query(PaginationQuery)
+    page = params["page"]
+    per_page = params["per_page"]
+    sort_by = params.get("sort_by")
+    sort_direction = params.get("sort_direction")
+
+    # Build sort query
+    if sort_by and sort_direction:
+        sort = [(sort_by, 1 if sort_direction == "asc" else -1)]  # user requested sort
     else:
-        # Apply expand query if provided
-        if g.get("expand_query"):
-            query = {**query, **g.get("expand_query")}
+        sort = g.get('sort', [('_id', -1)])  # sort modified internally or default sort
 
-        # Get total records and results at once
-        total_records, result = await asyncio.gather(
-            model.count(query),
-            model.find(query, limit=per_page, skip=(page - 1) * per_page, sort=sort)
-        )
+    # Get total records and results at once
+    total_records, result = await asyncio.gather(
+        model.count(query_param),
+        model.find(query_param, limit=per_page, skip=(page - 1) * per_page, sort=sort),
+    )
 
-        total_pages = total_records // per_page + (1 if total_records % per_page else 0)
+    total_pages = total_records // per_page + (1 if total_records % per_page else 0)
 
-        return jsonify({
-            'meta': {
-                'current_page': page,
-                'per_page': per_page,
-                'last_page': total_pages,
-                'total': total_records,
-            },
-            'data': await resource(result).dump()
-        })
+    return jsonify({
+        'meta': {
+            'current_page': page,
+            'per_page': per_page,
+            'last_page': total_pages,
+            'total': total_records,
+        },
+        'data': await resource(result).dump(),
+    })
 
 async def validate_request(schema: 'BaseModel', *, exclude_unset: bool = False):
     """Validate the request body against the schema.
