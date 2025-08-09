@@ -1,9 +1,5 @@
-from abc import ABC, abstractmethod
-from pydantic import BaseModel, Field
-from typing import TYPE_CHECKING, Any, Optional
-import redis.asyncio as redis
-import os
-import time
+from typing import TYPE_CHECKING, Any
+import json
 from fast_app.contracts.broadcast_channel import BroadcastChannel
 from fast_app.utils.broadcast_utils import (
     convert_broadcast_event_to_websocket_event,
@@ -15,16 +11,10 @@ if TYPE_CHECKING:
     from fast_app.contracts.websocket_event import WebsocketEvent
 
 
-async def broadcast_websocket_event(channel_name: str, websocket_event: 'WebsocketEvent') -> bool:
-    """
-    Direct method to broadcast a websocket event.
-    
-    Returns True if broadcast was successful, False otherwise.
-    """
-    await redis_broadcast_client.publish(
-        channel_name, 
-        websocket_event.model_dump_json()
-    )
+async def publish_to_channel(channel_name: str, data: 'WebsocketEvent | dict[str, Any]') -> None:
+    """Publish either a websocket event or a dictionary to a channel."""
+    payload = data.model_dump_json() if hasattr(data, "model_dump_json") else json.dumps(data)
+    await redis_broadcast_client.publish(channel_name, payload)
 
 
 async def broadcast(event: 'BroadcastEvent') -> bool:
@@ -57,6 +47,6 @@ async def broadcast(event: 'BroadcastEvent') -> bool:
     )
     
     # Publish to Redis
-    await broadcast_websocket_event(channel_name, websocket_event)
+    await redis_broadcast_client.publish(channel_name, websocket_event.model_dump_json())
     
     return True

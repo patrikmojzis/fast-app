@@ -1,11 +1,11 @@
 from typing import Callable, Optional, TYPE_CHECKING
 
 from bson import ObjectId
-from quart import jsonify, g
+from quart import jsonify, g, request
 
 from fast_app.decorators.middleware_decorator import middleware
 from fast_app.core.middlewares import EtagMiddleware
-from fast_app.core.api import paginate_all, validate_request
+from fast_app.core.api import paginate_all, search_all, validate_request
 from fast_app.exceptions.http_exceptions import HttpException, UnprocessableEntityException, UnauthorisedException
 
 if TYPE_CHECKING:
@@ -42,8 +42,10 @@ async def simple_show(id: str, Model: 'Model', Resource: 'Resource', ability: Op
     return await Resource(res).to_response()
 
 @middleware(EtagMiddleware)
-async def simple_index(Model: 'Model', Resource: 'Resource'):
-    return await paginate_all(Model, resource=Resource)
+async def simple_index(Model: 'Model', Resource: 'Resource', extended_query: dict | None = None):
+    if request.args.get("search"):
+        return await search_all(Model, resource=Resource, query_param=extended_query)
+    return await paginate_all(Model, resource=Resource, query_param=extended_query)
 
 @middleware(EtagMiddleware)
 async def simple_store(Model: 'Model', Resource: 'Resource', Schema: 'BaseModel'):
