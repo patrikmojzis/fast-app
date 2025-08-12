@@ -6,6 +6,8 @@ import argparse
 from .init_command import InitCommand
 from .make_command import MakeCommand
 from .publish_command import PublishCommand
+from .seed_command import SeedCommand
+from .migrate_command import MigrateCommand
 from .version_command import VersionCommand
 
 
@@ -23,7 +25,9 @@ def main() -> None:
         InitCommand(),
         MakeCommand(), 
         PublishCommand(),
-        VersionCommand()
+        SeedCommand(),
+        MigrateCommand(),
+        VersionCommand(),
     ]
     
     command_map = {}

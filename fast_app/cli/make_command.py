@@ -27,6 +27,9 @@ class MakeCommand(CommandBase):
         'broadcast_channel': 'app/broadcasting',
         'storage_driver': 'app/storage_drivers',
         'validator_rule': 'app/rules',
+        'factory': 'app/db/factories',
+        'seeder': 'app/db/seeders',
+        'migration': 'app/db/migrations',
     }
     
     @property
