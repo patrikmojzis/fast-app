@@ -1,6 +1,8 @@
-from typing import Optional, Dict, Type, List
 import importlib
+from typing import Optional, Dict, Type, List
+
 from fast_app import Event, EventListener
+
 
 def autodiscover_events() -> Optional[Dict[Type[Event], List[Type[EventListener]]]]:
     """

@@ -1,7 +1,8 @@
 from typing import Optional
 
-from fast_app.utils.serialisation import get_exception_error_type
 from fast_app.exceptions.http_exceptions import HttpException
+from fast_app.utils.serialisation import get_exception_error_type
+
 
 class AppException(Exception):
     def __init__(self,
@@ -31,6 +32,29 @@ class AppException(Exception):
 
     def to_response(self):
         return self.to_http_exception().to_response()
+
+class ValidationRuleException(ValueError):
+    """
+    Distinct validation error raised by schema ValidatorRules.
+
+    This is intentionally different from Pydantic's ValidationError so callers
+    can distinguish between field-shape/type errors (Pydantic) and post-parse
+    rule errors (e.g., existence checks, cross-field constraints, DB lookups).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        loc: tuple[str, ...] | None = None,
+        error_type: str = "value_error",
+        errors: list[dict] | None = None,
+    ):
+        super().__init__(message)
+        self.message = message
+        self.loc = loc or tuple()
+        self.error_type = error_type
+        self.errors = errors
 
 class DatabaseNotInitializedException(RuntimeError):
     def __init__(self):

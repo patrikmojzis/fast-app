@@ -1,11 +1,9 @@
 """Publish predefined packages."""
 
 import argparse
-from abc import abstractmethod
 from pathlib import Path
 
 from fast_app.utils.file_utils import copy_tree
-
 from .command_base import CommandBase
 
 

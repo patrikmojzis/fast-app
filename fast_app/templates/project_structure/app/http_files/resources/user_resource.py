@@ -1,7 +1,7 @@
-from fast_app.contracts.resource import Resource
-
-from app.models.user import User
 from app.http_files.schemas.user_schema import UserSchema
+from app.models.user import User
+
+from fast_app.contracts.resource import Resource
 
 
 class UserResource(Resource):

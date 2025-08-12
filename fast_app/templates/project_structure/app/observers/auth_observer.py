@@ -1,9 +1,9 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
-from fast_app import Observer, create_refresh_token, REFRESH_TOKEN_LIFETIME, get_client_ip
 from quart import has_request_context, request
 
+from fast_app import Observer, create_refresh_token, REFRESH_TOKEN_LIFETIME, get_client_ip
 
 if TYPE_CHECKING:
     from app.models.auth import Auth

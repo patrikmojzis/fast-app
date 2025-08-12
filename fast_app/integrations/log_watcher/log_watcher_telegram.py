@@ -1,5 +1,4 @@
 import os
-from typing import List
 
 from fast_app.exceptions.common_exceptions import EnvMissingException
 from fast_app.integrations.notification_channels.telegram import send_via_telegram

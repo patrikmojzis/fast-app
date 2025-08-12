@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional
 
+from app.observers.auth_observer import AuthObserver
 from bson import ObjectId
 
 from fast_app import Model, register_observer, create_access_token
-from app.observers.auth_observer import AuthObserver
 
 if TYPE_CHECKING:
     from app.models.user import User

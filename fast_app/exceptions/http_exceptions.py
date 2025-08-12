@@ -1,5 +1,5 @@
-from typing import Optional
 from quart import jsonify
+
 from fast_app.utils.serialisation import serialise, get_exception_error_type
 
 

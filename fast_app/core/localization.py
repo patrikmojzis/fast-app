@@ -21,6 +21,7 @@ import json
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Dict, Any, Optional
+
 from fast_app.config import LOCALE_DEFAULT, LOCALE_FALLBACK, LOCALE_PATH
 
 # Module state - elegant simplicity

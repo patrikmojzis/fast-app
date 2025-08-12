@@ -1,12 +1,11 @@
 import asyncio
 from datetime import datetime
 from typing import Any, Callable, Awaitable
-from functools import wraps
-
-from quart import g
-from bson import ObjectId
 
 from app.models.auth import Auth
+from bson import ObjectId
+from quart import g
+
 from fast_app import (
     Middleware,
     get_bearer_auth_token,

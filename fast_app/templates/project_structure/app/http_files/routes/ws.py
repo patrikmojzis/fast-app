@@ -1,4 +1,5 @@
 from app.http_files.controllers import ws_controller
+
 from fast_app import Route
 
 routes = [

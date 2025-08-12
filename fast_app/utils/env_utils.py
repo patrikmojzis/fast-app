@@ -1,9 +1,7 @@
 import os
+from typing import Optional
+
 from dotenv import load_dotenv
-from typing import Dict, List, Type, Optional
-from fast_app.application import Application
-from fast_app import Event, EventListener
-from fast_app.utils.autodiscovery.event_autodiscovery import autodiscover_events
 
 
 def configure_env(env_file_name: Optional[str] = None) -> None:

@@ -1,28 +1,22 @@
-import os
-import inspect
 from typing import Any, Callable, Awaitable
-from functools import wraps
 
-from quart import jsonify
+from quart import has_request_context, has_websocket_context
 
 from fast_app.contracts.middleware import Middleware
-from fast_app.exceptions.http_exceptions import HttpException, ServerErrorException
-from fast_app.exceptions.common_exceptions import AppException
-from fast_app.exceptions.model_exceptions import ModelException
+from fast_app.core.middlewares.handle_http_exceptions_middleware import HandleHttpExceptionsMiddleware
+from fast_app.core.middlewares.handle_websocket_exceptions_middleware import HandleWebsocketExceptionsMiddleware
 
 
 class HandleExceptionsMiddleware(Middleware):
-    """Middleware for handling exceptions across the application"""
-    
-    async def handle(self, next_handler: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:
-        try:
-            return await next_handler(*args, **kwargs)
-        except HttpException as e:
-            return e.to_response()
-        except AppException as e:
-            return e.to_response()
-        except Exception as e:
-            if os.getenv("ENV") == "debug":
-                raise e
+    """Delegates to HTTP or WebSocket exception middleware based on context."""
 
-            return ServerErrorException().to_response()
+    def __init__(self) -> None:
+        self.http_handler = HandleHttpExceptionsMiddleware()
+        self.ws_handler = HandleWebsocketExceptionsMiddleware()
+
+    async def handle(self, next_handler: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:
+        if has_request_context():
+            return await self.http_handler.handle(next_handler, *args, **kwargs)
+        if has_websocket_context():
+            return await self.ws_handler.handle(next_handler, *args, **kwargs)
+        raise Exception("Requires request or websocket context.")

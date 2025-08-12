@@ -1,10 +1,9 @@
-from typing import TYPE_CHECKING, Any
-import redis.asyncio as redis
 import os
-import time
-from fast_app.utils.serialisation import pascal_case_to_snake_case
+from typing import TYPE_CHECKING
+
+import redis.asyncio as redis
+
 from fast_app.contracts.websocket_event import WebsocketEvent
-from fast_app.contracts.broadcast_channel import BroadcastChannel
 
 if TYPE_CHECKING:
     from fast_app.contracts.broadcast_event import BroadcastEvent
@@ -25,7 +24,7 @@ async def convert_broadcast_event_to_websocket_event(event: 'BroadcastEvent') ->
     
     event_type = event.get_event_type()
     
-    if hasattr(data, "dump"):
+    if hasattr(data, "dump"):  # If is resource
         return WebsocketEvent(type=event_type, data=await data.dump())
     
     return WebsocketEvent(type=event_type, data=data)

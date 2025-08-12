@@ -1,15 +1,10 @@
-from typing import TYPE_CHECKING
+import os
 
 import requests
 from exponent_server_sdk import (
-    DeviceNotRegisteredError,
     PushClient,
     PushMessage,
-    PushServerError,
-    PushTicketError,
 )
-from requests.exceptions import ConnectionError, HTTPError
-import os
 
 
 # Basic arguments. You should extend this function with the push features you

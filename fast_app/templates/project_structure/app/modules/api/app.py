@@ -1,11 +1,12 @@
 import os
 
+from app.http_files.routes.api import routes
+from app.http_files.routes.ws import routes as ws_routes
 from quart import Quart
 from quart_cors import cors
 
-from app.http_files.routes.api import routes
-from app.http_files.routes.ws import routes as ws_routes
 from fast_app.utils.routing_utils import register_routes
+
 
 def get_cors_origins() -> list[str]:
     """Get CORS origins based on environment."""

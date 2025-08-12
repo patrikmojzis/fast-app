@@ -1,5 +1,7 @@
 from typing import Callable, Optional, Union, List
+
 from pydantic import BaseModel, Field, ConfigDict
+
 from fast_app.contracts.middleware import Middleware
 
 

@@ -1,5 +1,6 @@
-from fast_app import EventBase
+from fast_app import Event
 
 
-class Event(EventBase):
+class NewClass(Event):
+    """Domain event data container."""
     pass

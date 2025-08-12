@@ -5,7 +5,6 @@ import re
 from pathlib import Path
 
 from fast_app.utils.serialisation import pascal_case_to_snake_case, snake_case_to_pascal_case
-
 from .command_base import CommandBase
 
 
@@ -14,6 +13,8 @@ class MakeCommand(CommandBase):
     
     TYPE_PATHS = {
         'event': 'app/events',
+        'broadcast_event': 'app/events',
+        'websocket_event': 'app/events',
         'listener': 'app/listeners', 
         'model': 'app/models',
         'notification': 'app/notifications',
@@ -21,7 +22,11 @@ class MakeCommand(CommandBase):
         'observer': 'app/observers',
         'policy': 'app/policies',
         'resource': 'app/http_files/resources',
-        'schema': 'app/http_files/schemas'
+        'schema': 'app/http_files/schemas',
+        'middleware': 'app/http_files/middlewares',
+        'broadcast_channel': 'app/broadcasting',
+        'storage_driver': 'app/storage_drivers',
+        'validator_rule': 'app/rules',
     }
     
     @property
@@ -67,24 +72,10 @@ class MakeCommand(CommandBase):
     def _process_template(self, template_path: Path, file_type: str, class_name: str) -> str:
         """Process template with class name replacement."""
         content = template_path.read_text(encoding='utf-8')
-        
-        replacements = {
-            'event': 'Event',
-            'listener': 'Listener',
-            'model': 'Model', 
-            'notification': 'Notification',
-            'notification_channel': 'NotificationChannel',
-            'observer': 'Observer',
-            'policy': 'Policy',
-            'resource': 'Resource',
-            'schema': 'Schema'
-        }
-        
-        if file_type in replacements:
-            pattern = rf'\\b{replacements[file_type]}\\b'
-            content = re.sub(pattern, class_name, content)
-        
-        return content
+        # Replace only the placeholder class name across all templates
+        # to avoid touching import symbols or base classes.
+        pattern = r'\bNewClass\b'
+        return re.sub(pattern, class_name, content)
     
     def _get_destination(self, file_type: str, file_name: str) -> Path:
         """Get destination file path."""

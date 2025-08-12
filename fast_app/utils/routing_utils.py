@@ -1,7 +1,9 @@
 from typing import TYPE_CHECKING, Callable, List, Type
+
+from quart import Quart
+
 from fast_app.contracts.middleware import Middleware
 from fast_app.core.middlewares.handle_exceptions_middleware import HandleExceptionsMiddleware
-from quart import Quart
 
 if TYPE_CHECKING:
     from fast_app.contracts.route import Route

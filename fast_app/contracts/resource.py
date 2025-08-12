@@ -1,6 +1,5 @@
 import asyncio
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
 
 from quart import jsonify, Response
 

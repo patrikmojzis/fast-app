@@ -1,6 +1,6 @@
-from typing import Type, Callable, Union
-from functools import wraps
 import inspect
+from typing import Type, Callable, Union
+
 from fast_app.contracts.middleware import Middleware
 
 

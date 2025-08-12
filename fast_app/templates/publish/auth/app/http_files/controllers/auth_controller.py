@@ -1,16 +1,14 @@
-from datetime import datetime
-from typing import Optional
+from quart import g, Response
 
-from quart import request, g, jsonify, Response
-from bson import ObjectId
-
-from app.models.user import User
-from app.models.auth import Auth
 from app.http_files.middlewares.auth_middleware import protected_route
-from fast_app.exceptions.http_exceptions import HttpException, UnauthorisedException
-from app.http_files.schemas.auth_refresh_schema import AuthRefreshSchema
-from fast_app.core.api import validate_request, get_client_ip
 from app.http_files.resources.auth_resource import AuthResource
+from app.http_files.schemas.auth_refresh_schema import AuthRefreshSchema
+from app.models.auth import Auth
+from app.models.user import User
+from quart import g, Response
+
+from fast_app.core.api import validate_request
+from fast_app.exceptions.http_exceptions import UnauthorisedException
 
 
 # async def login():

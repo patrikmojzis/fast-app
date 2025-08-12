@@ -2,6 +2,7 @@ from functools import wraps
 
 from fast_app.core.stopwatch import Stopwatch
 
+
 def stopwatch(func=None, *, logger=None):
     """
     Decorator that times the execution of a function using the Stopwatch class.

@@ -1,20 +1,14 @@
-import os
-import importlib
-import inspect
-from pathlib import Path
 from typing import Any, Dict, List, Type, Optional
 
-from dotenv import load_dotenv
-
-from fast_app.utils.logging import setup_logging
-from fast_app import Model, Observer, Policy, Event, EventListener
-from fast_app.decorators import register_observer, register_policy
+from fast_app import Event, EventListener
 from fast_app.application import Application
-from fast_app.utils.autodiscovery.event_autodiscovery import autodiscover_events
-from fast_app.utils.env_utils import configure_env
 from fast_app.core.storage import Storage
 from fast_app.core.storage_drivers import get_builtin_storage_drivers
+from fast_app.utils.autodiscovery.event_autodiscovery import autodiscover_events
 from fast_app.utils.autodiscovery.model_autodiscovery import autodiscover_models
+from fast_app.utils.env_utils import configure_env
+from fast_app.utils.logging import setup_logging
+
 
 def boot(*,
     autodiscovery: bool = True,

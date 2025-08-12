@@ -1,8 +1,8 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, Union
 
-from fast_app.utils.serialisation import serialise
 from fast_app.contracts.event import Event
+from fast_app.utils.serialisation import serialise
 
 if TYPE_CHECKING:
     from fast_app.contracts.broadcast_channel import BroadcastChannel

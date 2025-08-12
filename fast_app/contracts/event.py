@@ -1,5 +1,7 @@
 from pydantic import BaseModel
+
 from fast_app.utils.serialisation import pascal_case_to_snake_case
+
 
 class Event(BaseModel):
     """

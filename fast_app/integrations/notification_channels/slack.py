@@ -5,6 +5,7 @@ from typing import Dict
 
 import aiohttp
 
+
 async def send_via_slack(payload: Dict, webhook_url: str) -> None:
     """Send a JSON payload to a Slack webhook URL."""
     ssl_context = ssl.create_default_context()

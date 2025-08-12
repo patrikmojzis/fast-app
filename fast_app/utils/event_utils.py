@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, List, Type, Tuple, Optional
+
 from fast_app.application import Application
 
 if TYPE_CHECKING:

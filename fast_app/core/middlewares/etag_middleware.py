@@ -1,7 +1,6 @@
 import hashlib
 import json
 from typing import Any, Callable, Awaitable
-from functools import wraps
 
 from quart import make_response, request
 

@@ -1,6 +1,3 @@
-from functools import wraps
-from threading import local
-
 instances = {}
 
 def singleton(cls):

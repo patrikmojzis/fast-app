@@ -1,5 +1,6 @@
-from typing import TYPE_CHECKING, Any
 import json
+from typing import TYPE_CHECKING
+
 from fast_app.contracts.broadcast_channel import BroadcastChannel
 from fast_app.utils.broadcast_utils import (
     convert_broadcast_event_to_websocket_event,
@@ -8,7 +9,6 @@ from fast_app.utils.broadcast_utils import (
 
 if TYPE_CHECKING:
     from fast_app.contracts.broadcast_event import BroadcastEvent
-    from fast_app.contracts.websocket_event import WebsocketEvent
 
 
 async def publish_to_channel(channel_name: str, data: 'WebsocketEvent | dict[str, Any]') -> None:

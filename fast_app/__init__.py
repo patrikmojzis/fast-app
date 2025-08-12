@@ -21,10 +21,10 @@ __email__ = "patrikm53@gmail.com"
 __license__ = "MIT"
 __url__ = "https://github.com/patrikmojzis/fast-app"
 
+from .contracts import *  # noqa: F401,F403
+from .core import *  # noqa: F401,F403
+from .core.localization import __, set_locale, get_locale, trans, trans_choice
 # Core imports for easy access
 from .database.mongo import *  # noqa: F401,F403
 from .decorators import *  # noqa: F401,F403
 from .exceptions import *  # noqa: F401,F403
-from .core import *  # noqa: F401,F403
-from .contracts import *  # noqa: F401,F403
-from .core.localization import __, set_locale, get_locale, trans, trans_choice

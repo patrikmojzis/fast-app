@@ -1,19 +1,19 @@
 """Google Sign In integration for fast-app package."""
 
+import hashlib
 import os
 from typing import Any, Dict, Optional, TypedDict
-import hashlib
 
 import aiohttp
 
 from fast_app.core.cache import Cache
+from fast_app.exceptions.common_exceptions import EnvMissingException
 from fast_app.exceptions.google_auth_exceptions import (
     GoogleApiError,
     GoogleInvalidTokenError,
     GoogleServerError,
     GoogleUnauthorizedError,
 )
-from fast_app.exceptions.common_exceptions import EnvMissingException
 
 
 class GoogleUserInfo(TypedDict):

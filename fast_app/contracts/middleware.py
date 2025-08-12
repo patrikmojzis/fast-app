@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Any, Awaitable
 from functools import wraps
-import inspect
+from typing import Callable, Any, Awaitable
 
 
 class Middleware(ABC):

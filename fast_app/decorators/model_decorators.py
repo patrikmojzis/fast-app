@@ -1,8 +1,8 @@
 from functools import wraps
 from typing import TYPE_CHECKING, Type, TypeVar
 
-from fast_app.core.mixins.routes_notifications import RoutesNotifications
 from fast_app.core.mixins.authorizable import Authorizable
+from fast_app.core.mixins.routes_notifications import RoutesNotifications
 
 if TYPE_CHECKING:  # pragma: no cover - imported for type checking only
     from fast_app import Policy, Observer

@@ -1,10 +1,10 @@
+from app.http_files.middlewares.auth_middleware import protected_route
 from app.http_files.resources.user_resource import UserResource
+from app.http_files.schemas.user_schema import UserSchema
+from app.models.user import User
 from quart import g
 
-from app.http_files.middlewares.auth_middleware import protected_route
 from fast_app.core.simple_controller import simple_destroy, simple_show, simple_update
-from app.models.user import User
-from app.http_files.schemas.user_schema import UserSchema
 
 
 async def current(*args, **kwargs):

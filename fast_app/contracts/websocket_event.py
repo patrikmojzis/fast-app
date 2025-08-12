@@ -1,10 +1,14 @@
-from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field, field_validator
 from typing import Any, Optional
-import redis.asyncio as redis
-import os
 import time
 from fast_app.utils.serialisation import pascal_case_to_snake_case
+import time
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field, field_validator
+
+from fast_app.utils.serialisation import pascal_case_to_snake_case
+
 
 class WebsocketEvent(BaseModel):
     type: Optional[str] = Field(None, description="The type of the event")

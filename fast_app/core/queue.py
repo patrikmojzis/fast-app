@@ -7,8 +7,8 @@ from typing import Callable
 from redis import Redis
 from rq import Queue
 
-from fast_app.config import REDIS_QUEUE_DB
 from fast_app.application import Application
+from fast_app.config import REDIS_QUEUE_DB
 
 rq = Queue(
     name=os.getenv("RQ_QUEUE_NAME", "default"),

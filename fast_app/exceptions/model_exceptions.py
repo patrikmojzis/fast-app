@@ -1,7 +1,5 @@
 from typing import Optional
 
-from fast_app.utils.serialisation import get_exception_error_type
-from fast_app.exceptions.http_exceptions import HttpException
 from fast_app.exceptions.common_exceptions import AppException
 
 

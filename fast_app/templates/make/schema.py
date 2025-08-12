@@ -1,5 +1,5 @@
-from pydantic import BaseModel
+from fast_app.core.schema import Schema
 
 
-class Schema(BaseModel):
+class NewClass(Schema):
     pass

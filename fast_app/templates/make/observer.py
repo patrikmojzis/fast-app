@@ -1,11 +1,12 @@
-from fast_app import Observer
 from typing import TYPE_CHECKING
+
+from fast_app import Observer
 
 if TYPE_CHECKING:
     from fast_app import Model
 
 
-class Observer(Observer):
+class NewClass(Observer):
     async def on_updating(self, model: 'Model'):
         pass
 

@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta
-
 from app.models.auth import Auth
 
 # CRON JOB

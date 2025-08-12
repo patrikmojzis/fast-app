@@ -1,8 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict, TypedDict
-from fast_app.exceptions.common_exceptions import EnvMissingException
+from typing import List, TypedDict
 
 # Shared helpers for jobs
 DEFAULT_LOG_ERRORS_CHECK_MINUTES: int = 5

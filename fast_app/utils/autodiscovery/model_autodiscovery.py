@@ -1,9 +1,9 @@
-from fast_app import Model, Observer, Policy
-from fast_app.decorators import register_observer, register_policy
 import importlib
 import inspect
 from pathlib import Path
-from typing import Optional
+
+from fast_app import Model, Observer, Policy
+from fast_app.decorators import register_observer, register_policy
 
 
 # TODO: Add support for custom models_dir, observers_dir, policies_dir

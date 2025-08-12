@@ -1,7 +1,7 @@
 from fast_app.app_provider import boot
 boot()
 
-from fast_app.core.cron import run_cron, CronJobSpec
+from fast_app.core.cron import run_cron
 import asyncio
 
 if __name__ == "__main__":

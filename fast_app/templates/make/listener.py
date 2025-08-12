@@ -1,8 +1,7 @@
 from fast_app import EventListener
 
 
-class Listener(EventListener):
-
+class NewClass(EventListener):
     async def handle(self) -> None:
-       # access event data from self.event
-       pass
+        # Access event data from self.event
+        pass

@@ -1,6 +1,9 @@
-from fast_app.core.broadcasting import BroadcastEvent, WebsocketEvent, redis_broadcast_client
-from quart import websocket
 import asyncio
+
+from quart import websocket
+
+from fast_app.core.broadcasting import WebsocketEvent, redis_broadcast_client
+
 
 async def receive_loop():
     while True:

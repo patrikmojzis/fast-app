@@ -1,12 +1,10 @@
-from typing import TYPE_CHECKING, List, Type, Tuple, Optional
+from typing import TYPE_CHECKING
 
-from fast_app.application import Application
 from fast_app.core.queue import queue
 from fast_app.utils.event_utils import _get_event_listeners, _process_event_listener
 
 if TYPE_CHECKING:
     from fast_app.contracts.event import Event
-    from fast_app.contracts.event_listener import EventListener
 
 
 def dispatch(event: 'Event') -> None:

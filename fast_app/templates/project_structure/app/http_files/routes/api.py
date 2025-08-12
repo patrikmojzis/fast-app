@@ -1,7 +1,7 @@
-from quart import Quart
 from app.http_files.controllers import user_controller, auth_controller, file_controller
-from fast_app import Route
 from app.http_files.middlewares.auth_middleware import AuthMiddleware
+
+from fast_app import Route
 
 routes = [
     # Authentication routes
