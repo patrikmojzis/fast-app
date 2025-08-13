@@ -1,4 +1,4 @@
-# app/models/model_base.py
+# app/models/model.py
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, TypeVar, ClassVar, Any, get_type_hints
@@ -17,7 +17,7 @@ from fast_app.utils.serialisation import serialise
 
 if TYPE_CHECKING:
     from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorCommandCursor
-    from fast_app.observer_base import Observer
+    from fast_app import Observer
 
 T = TypeVar('T', bound='Model')
 

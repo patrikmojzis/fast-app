@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from fast_app.notification_base import Notification
+    from fast_app import Notification
 
 
 class RoutesNotifications:

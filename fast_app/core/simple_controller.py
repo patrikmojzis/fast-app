@@ -9,7 +9,7 @@ from fast_app.decorators.middleware_decorator import middleware
 from fast_app.exceptions.http_exceptions import UnprocessableEntityException, UnauthorisedException
 
 if TYPE_CHECKING:
-    from fast_app.model_base import Model
+    from fast_app import Model
     from fast_app.contracts.resource import Resource
     from pydantic import BaseModel
 

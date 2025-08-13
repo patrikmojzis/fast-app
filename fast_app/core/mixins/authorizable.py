@@ -4,8 +4,8 @@ from typing import Union, Callable, Optional, TYPE_CHECKING
 from fast_app.exceptions.http_exceptions import ForbiddenException
 
 if TYPE_CHECKING:
-    from fast_app.model_base import Model
-    from fast_app.policy_base import Policy
+    from fast_app import Model
+    from fast_app import Policy
 
 
 class Authorizable:
