@@ -21,12 +21,15 @@ import json
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Dict, Any, Optional
-
-from fast_app.config import LOCALE_DEFAULT, LOCALE_FALLBACK, LOCALE_PATH
+import os
 
 # Module state - elegant simplicity
 _translations: Dict[str, Dict[str, Any]] = {}
-_current_locale: ContextVar[str] = ContextVar('locale', default=LOCALE_DEFAULT)
+# Internal defaults without config dependency
+_LOCALE_DEFAULT = os.getenv('LOCALE_DEFAULT', 'en')
+_LOCALE_FALLBACK = os.getenv('LOCALE_FALLBACK', 'en')
+_LOCALE_PATH = os.getenv('LOCALE_PATH', os.path.join(os.getcwd(), 'lang'))
+_current_locale: ContextVar[str] = ContextVar('locale', default=_LOCALE_DEFAULT)
 
 
 def _get_nested(data: Dict[str, Any], key: str) -> Optional[str]:
@@ -45,7 +48,7 @@ def _load_locale(locale: str) -> Dict[str, Any]:
     if locale in _translations:
         return _translations[locale]
     
-    locale_file = Path(LOCALE_PATH) / f"{locale}.json"
+    locale_file = Path(_LOCALE_PATH) / f"{locale}.json"
     translations = {}
     
     if locale_file.exists():
@@ -80,8 +83,8 @@ def __(key: str, parameters: Optional[Dict[str, Any]] = None,
     translation = _get_nested(_load_locale(current_locale), key)
     
     # Fallback to default locale if needed and different
-    if translation is None and current_locale != LOCALE_FALLBACK:
-        translation = _get_nested(_load_locale(LOCALE_FALLBACK), key)
+    if translation is None and current_locale != _LOCALE_FALLBACK:
+        translation = _get_nested(_load_locale(_LOCALE_FALLBACK), key)
     
     # Final fallback to default or key itself
     if translation is None:
@@ -110,6 +113,12 @@ def get_locale() -> str:
 def clear_cache() -> None:
     """Clear translation cache. Sometimes you need a fresh start."""
     _translations.clear()
+
+
+# Optional: allow tests or apps to override locale path at runtime
+def set_locale_path(path: str) -> None:
+    global _LOCALE_PATH
+    _LOCALE_PATH = path
 
 
 # Elegant aliases - variations on the theme

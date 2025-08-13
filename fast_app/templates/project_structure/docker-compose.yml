@@ -2,9 +2,9 @@ services:
   # Web application (API and WebSocket)
   api:
     build: .
-    container_name: "${COMPOSE_PROJECT_NAME:-fast_app}-api"
+    container_name: "${APP_NAME:-fast_app}-api"
     ports:
-      - "${MAP_WEB_PORT:-8000}:8000"
+      - "${MAP_API_PORT:-8000}:8000"
     env_file:
       - .env.docker
     environment:
@@ -19,12 +19,12 @@ services:
       - ./storage/local:/app/storage/local
       - ./storage/public:/app/storage/public
     networks:
-      - ${COMPOSE_PROJECT_NAME:-fast_app}
+      - ${APP_NAME:-fast_app}
 
   # RQ Worker with Scheduler
   rq-worker:
     build: .
-    container_name: "${COMPOSE_PROJECT_NAME:-fast_app}-rq-worker"
+    container_name: "${APP_NAME:-fast_app}-rq-worker"
     env_file:
       - .env.docker
     environment:
@@ -39,12 +39,12 @@ services:
       - ./storage/local:/app/storage/local
       - ./storage/public:/app/storage/public
     networks:
-      - ${COMPOSE_PROJECT_NAME:-fast_app}
+      - ${APP_NAME:-fast_app}
 
   # Cron Service
   cron:
     build: .
-    container_name: "${COMPOSE_PROJECT_NAME:-fast_app}-cron"
+    container_name: "${APP_NAME:-fast_app}-cron"
     env_file:
       - .env.docker
     environment:
@@ -59,19 +59,19 @@ services:
       - ./storage/local:/app/storage/local
       - ./storage/public:/app/storage/public
     networks:
-      - ${COMPOSE_PROJECT_NAME:-fast_app}
+      - ${APP_NAME:-fast_app}
 
   # Redis
   redis:
     image: redis:7-alpine
-    container_name: "${COMPOSE_PROJECT_NAME:-fast_app}-redis"
+    container_name: "${APP_NAME:-fast_app}-redis"
     ports:
       - "${MAP_REDIS_PORT:-6379}:6379"
     restart: unless-stopped
     volumes:
       - redis_data:/data
     networks:
-      - ${COMPOSE_PROJECT_NAME:-fast_app}
+      - ${APP_NAME:-fast_app}
     command: redis-server --appendonly yes
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
@@ -83,5 +83,5 @@ volumes:
   redis_data:
 
 networks:
-  ${COMPOSE_PROJECT_NAME:-fast_app}:
+  ${APP_NAME:-fast_app}:
     driver: bridge 

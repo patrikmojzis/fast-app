@@ -2,7 +2,7 @@ import os
 from typing import List
 
 from fast_app.exceptions.common_exceptions import EnvMissingException
-from fast_app.integrations.notification_channels.slack import send_via_slack
+from fast_app.integrations.notifications.slack import send_via_slack
 from fast_app.utils.log_errors_checker import (
     LogErrorsChecker,
     LogErrorEntry,

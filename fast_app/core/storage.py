@@ -37,23 +37,18 @@ class Storage:
     def _load_default_config(cls) -> None:
         if cls._disks_config is not None:
             return
-        try:
-            from fast_app.config import STORAGE_DISKS, STORAGE_DEFAULT_DISK
-            cls._disks_config = STORAGE_DISKS
-            cls._default_disk = STORAGE_DEFAULT_DISK
-        except Exception:
-            # Minimal sensible default
-            cls._disks_config = {
-                "local": {
-                    "driver": "disk",
-                    "root": os.path.join(os.getcwd(), "storage", "local"),
-                    "permissions": {
-                        "file": {"public": 0o644, "private": 0o600},
-                        "dir": {"public": 0o755, "private": 0o700},
-                    },
-                }
+        # Built-in minimal sensible defaults
+        cls._disks_config = {
+            "local": {
+                "driver": "disk",
+                "root": os.path.join(os.getcwd(), "storage", "local")
+            },
+            "public": {
+                "driver": "disk",
+                "root": os.path.join(os.getcwd(), "storage", "public")
             }
-            cls._default_disk = "local"
+        }
+        cls._default_disk = "local"
     
     @classmethod
     def disk(cls, name: Optional[str] = None) -> StorageDriver:
@@ -97,8 +92,8 @@ class Storage:
         return await cls.disk().get(path)
     
     @classmethod
-    async def put(cls, path: str, content: Union[str, bytes, IO], visibility: Optional[str] = None) -> str:
-        return await cls.disk().put(path, content, visibility)
+    async def put(cls, path: str, content: Union[str, bytes, IO], **kwargs) -> str:
+        return await cls.disk().put(path, content, **kwargs)
     
     @classmethod
     async def delete(cls, path: Union[str, List[str]]) -> bool:

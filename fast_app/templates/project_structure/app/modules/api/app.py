@@ -1,7 +1,7 @@
 import os
 
-from app.http_files.routes.api import routes
-from app.http_files.routes.ws import routes as ws_routes
+from app.http_files.routes.api import routes as api_routes
+# from app.http_files.routes.ws import routes as ws_routes
 from quart import Quart
 from quart_cors import cors
 
@@ -35,8 +35,9 @@ def create_app() -> Quart:
     cors(app, allow_origin=get_cors_origins(), allow_credentials=True)
     
     # Configure HTTP routes
-    register_routes(app, routes)
+    register_routes(app, api_routes)
+    
     # Configure WebSocket routes
-    register_routes(app, ws_routes)
+    # register_routes(app, ws_routes)
     
     return app

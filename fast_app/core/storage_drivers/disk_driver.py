@@ -16,13 +16,6 @@ class DiskDriver(StorageDriver):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.root = Path(config.get("root", os.getcwd()))
-        self.permissions = config.get(
-            "permissions",
-            {
-                "file": {"public": 0o644, "private": 0o600},
-                "dir": {"public": 0o755, "private": 0o700},
-            },
-        )
         self.root.mkdir(parents=True, exist_ok=True)
 
     def _full(self, path: str) -> Path:
@@ -45,7 +38,7 @@ class DiskDriver(StorageDriver):
             raise FileNotFoundError(f"File not found: {path}")
         return file_path.read_bytes()
 
-    async def put(self, path: str, content: Union[str, bytes, IO], visibility: Optional[str] = None) -> str:
+    async def put(self, path: str, content: Union[str, bytes, IO]) -> str:
         secure = self._secure(path)
         file_path = self._full(secure)
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -57,10 +50,6 @@ class DiskDriver(StorageDriver):
         else:
             with open(file_path, "wb") as f:
                 shutil.copyfileobj(content, f)
-
-        if visibility:
-            mode = self.permissions["file"].get(visibility, 0o644)
-            file_path.chmod(mode)
 
         return secure
 

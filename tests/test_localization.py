@@ -8,9 +8,8 @@ def test_localization(tmp_path, monkeypatch):
     lang_dir.mkdir()
     (lang_dir / "en.json").write_text(json.dumps({"greeting": "Hello {name}"}))
 
-    import fast_app.config as config
-    monkeypatch.setattr(config, "LOCALE_PATH", str(lang_dir))
     import fast_app.core.localization as localization
+    localization.set_locale_path(str(lang_dir))
     importlib.reload(localization)
 
     clear_cache = localization.clear_cache

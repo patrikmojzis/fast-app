@@ -116,7 +116,6 @@ async def upload():
         form = await request.form
         disk_name = form.get('disk', 'local')
         directory = form.get('directory', 'uploads')
-        visibility = form.get('visibility', 'private')
         preserve_filename = form.get('preserve_filename', 'false').lower() == 'true'
         
         # Read file content
@@ -142,7 +141,7 @@ async def upload():
         
         # Store file
         disk = Storage.disk(disk_name)
-        stored_path = await disk.put(file_path, file_content, visibility)
+        stored_path = await disk.put(file_path, file_content)
 
         return jsonify({
             'success': True,

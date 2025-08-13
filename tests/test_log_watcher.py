@@ -11,10 +11,10 @@ async def test_send_log_errors_via_slack(monkeypatch):
 
     stub_slack = types.SimpleNamespace(send_via_slack=lambda payload, url: None)
     sys.modules.setdefault(
-        "fast_app.integrations.notification_channels.slack", stub_slack
+        "fast_app.integrations.notifications.slack", stub_slack
     )
     sys.modules.setdefault(
-        "fast_app.integrations.notification_channels.mail",
+        "fast_app.integrations.notifications.mail",
         types.SimpleNamespace(
             send_via_mail=None,
             MailMessage=object,
@@ -23,11 +23,11 @@ async def test_send_log_errors_via_slack(monkeypatch):
         ),
     )
     sys.modules.setdefault(
-        "fast_app.integrations.notification_channels.telegram",
+        "fast_app.integrations.notifications.telegram",
         types.SimpleNamespace(send_via_telegram=None),
     )
     sys.modules.setdefault(
-        "fast_app.integrations.notification_channels.expo",
+        "fast_app.integrations.notifications.expo",
         types.SimpleNamespace(send_via_push_notification=None),
     )
     import importlib

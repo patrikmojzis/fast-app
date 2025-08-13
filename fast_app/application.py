@@ -4,7 +4,7 @@ from fast_app.decorators.singleton_decorator import singleton
 
 if TYPE_CHECKING:
     from fast_app import Event
-    from fast_app.event_listener_base import EventListener
+    from fast_app import EventListener
 
 
 @singleton

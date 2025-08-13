@@ -2,7 +2,7 @@ import os
 from typing import TYPE_CHECKING
 
 from fast_app import NotificationChannel
-from fast_app.integrations.notification_channels.telegram import send_via_telegram
+from fast_app.integrations.notifications.telegram import send_via_telegram
 
 if TYPE_CHECKING:
     from app.models.user import User

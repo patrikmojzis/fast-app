@@ -11,7 +11,7 @@ class NewClass(StorageDriver):
     async def get(self, path: str) -> bytes:
         return b""
 
-    async def put(self, path: str, content: Union[str, bytes, IO], visibility: Optional[str] = None) -> str:
+    async def put(self, path: str, content: Union[str, bytes, IO]) -> str:
         return path
 
     async def delete(self, path: Union[str, List[str]]) -> bool:

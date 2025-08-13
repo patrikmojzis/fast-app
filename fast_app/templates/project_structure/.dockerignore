@@ -41,7 +41,7 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-logs/
+log/
 *.log
 .storage/
 storage/

@@ -1,7 +1,7 @@
 import os
 
 from fast_app.exceptions.common_exceptions import EnvMissingException
-from fast_app.integrations.notification_channels.telegram import send_via_telegram
+from fast_app.integrations.notifications.telegram import send_via_telegram
 from fast_app.utils.log_errors_checker import (
     LogErrorsChecker,
     LogErrorEntry,

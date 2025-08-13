@@ -7,7 +7,7 @@ ENV=${ENV:-debug}
 QUEUE_NAME=${RQ_QUEUE_NAME:-default}
 
 # Redis database used for background queue
-REDIS_DB=0
+REDIS_DB=15
 
 # Construct Redis URL
 REDIS_URL="redis://${REDIS_HOST}:6379/${REDIS_DB}"
