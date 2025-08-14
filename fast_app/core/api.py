@@ -201,10 +201,10 @@ async def validate_request(schema: BaseModel | object, *, exclude_unset: bool = 
         raise UnprocessableEntityException(error_type="invalid_request", data=e.errors())
 
     # Optional post-parse rule validation if the schema supports it
-    avalidate = getattr(instance, "avalidate", None)
-    if callable(avalidate):
+    validate = getattr(instance, "validate", None)
+    if callable(validate):
         try:
-            await avalidate(partial=exclude_unset)
+            await validate(partial=exclude_unset)
         except ValidationRuleException as exc:
             errors = exc.errors if exc.errors is not None else [{
                 "loc": list(exc.loc),
@@ -252,10 +252,10 @@ async def validate_query(schema: BaseModel | object, *, exclude_unset: bool = Fa
         raise UnprocessableEntityException(error_type="invalid_query", data=e.errors())
 
     # Optional post-parse rule validation for query schemas as well
-    avalidate = getattr(instance, "avalidate", None)
-    if callable(avalidate):
+    validate = getattr(instance, "validate", None)
+    if callable(validate):
         try:
-            await avalidate(partial=exclude_unset)
+            await validate(partial=exclude_unset)
         except ValidationRuleException as exc:
             errors = exc.errors if exc.errors is not None else [{
                 "loc": list(exc.loc),

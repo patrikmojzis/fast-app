@@ -31,7 +31,7 @@ class Schema(BaseModel):
     class Meta:
         rules: List['Schema.Rule'] = []  # override in subclasses
 
-    async def avalidate(self, *, partial: bool = False) -> None:
+    async def validate(self, *, partial: bool = False) -> None:
         data = self.model_dump(exclude_unset=partial)
 
         rules: List[Schema.Rule] = getattr(self.Meta, 'rules', []) or []
