@@ -1,7 +1,6 @@
 from typing import Any, Sequence
 
-from fast_app import ValidatorRule
-from fast_app.exceptions.common_exceptions import ValidationRuleException
+from fast_validation import ValidatorRule, ValidationRuleException
 
 
 class NewClass(ValidatorRule):

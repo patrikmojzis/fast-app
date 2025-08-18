@@ -11,6 +11,7 @@ def test_localization(tmp_path, monkeypatch):
     import fast_app.core.localization as localization
     localization.set_locale_path(str(lang_dir))
     importlib.reload(localization)
+    localization.set_locale_path(str(lang_dir))  # Reset after reload
 
     clear_cache = localization.clear_cache
     __ = localization.__

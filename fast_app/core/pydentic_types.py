@@ -5,7 +5,7 @@ Usage:
 
     from typing import Optional
     from pydantic import ConfigDict
-    from fast_app.core.schema import Schema
+    from fast_validation import Schema
     from fast_app.core.pydentic_types import ObjectIdField, DateField, DateTimeField
 
     class MySchema(Schema):
@@ -24,7 +24,7 @@ These annotated types:
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
 
 from bson import ObjectId
 from pydantic import PlainSerializer
@@ -76,6 +76,25 @@ def _to_datetime(value: object) -> datetime:
     raise ValueError("Invalid datetime")
 
 
+def _extract_json(value: Any) -> Any:
+    # Accept dict/list directly, or JSON-parse strings; otherwise return as-is
+    if isinstance(value, (dict, list)):
+        return value
+    if isinstance(value, str):
+        import json
+
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            pass
+    return value
+
+
+JSONField = Annotated[
+    Any,
+    BeforeValidator(_extract_json),
+]
+
 ObjectIdField = Annotated[
     ObjectId,
     BeforeValidator(_to_object_id),
@@ -96,6 +115,7 @@ DateTimeField = Annotated[
 
 
 __all__ = [
+    "JSONField",
     "ObjectIdField",
     "DateField",
     "DateTimeField",

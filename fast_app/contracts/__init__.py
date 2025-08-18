@@ -17,5 +17,4 @@ from .policy import *  # noqa: F401,F403
 from .resource import *  # noqa: F401,F403
 from .route import *  # noqa: F401,F403
 from .storage_driver import *  # noqa: F401,F403
-from .validator_rule import *  # noqa: F401,F403
 from .websocket_event import *  # noqa: F401,F403

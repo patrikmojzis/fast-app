@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 from pydantic import ValidationError, BaseModel, Field
 from quart import request, has_request_context, has_websocket_context, websocket, jsonify, g
 
-from fast_app.exceptions.common_exceptions import AppException, ValidationRuleException
+from fast_app.exceptions.common_exceptions import AppException
+from fast_validation import ValidationRuleException, Schema
 from fast_app.exceptions.http_exceptions import UnprocessableEntityException
 from fast_app.utils.api_filters import parse_user_filter
 from fast_app.utils.api_utils import is_list_type, collect_list_values
@@ -200,18 +201,19 @@ async def validate_request(schema: BaseModel | object, *, exclude_unset: bool = 
         # Only catch pydantic parsing here
         raise UnprocessableEntityException(error_type="invalid_request", data=e.errors())
 
-    # Optional post-parse rule validation if the schema supports it
-    validate = getattr(instance, "validate", None)
-    if callable(validate):
-        try:
-            await validate(partial=exclude_unset)
-        except ValidationRuleException as exc:
-            errors = exc.errors if exc.errors is not None else [{
-                "loc": list(exc.loc),
-                "msg": exc.message,
-                "type": exc.error_type,
-            }]
-            raise UnprocessableEntityException(error_type="invalid_request", data=errors)
+    # Optional post-parse rule validation if the schema supports it (Schema class from fast-validation)
+    if isinstance(instance, Schema):
+        validate = getattr(instance, "validate", None)
+        if callable(validate):
+            try:
+                await validate(partial=exclude_unset)
+            except ValidationRuleException as exc:
+                errors = exc.errors if exc.errors is not None else [{
+                    "loc": list(exc.loc),
+                    "msg": exc.message,
+                    "type": exc.error_type,
+                }]
+                raise UnprocessableEntityException(error_type="invalid_request", data=errors)
 
     g.validated = instance.model_dump(exclude_unset=exclude_unset)
 
@@ -251,18 +253,19 @@ async def validate_query(schema: BaseModel | object, *, exclude_unset: bool = Fa
     except ValidationError as e:
         raise UnprocessableEntityException(error_type="invalid_query", data=e.errors())
 
-    # Optional post-parse rule validation for query schemas as well
-    validate = getattr(instance, "validate", None)
-    if callable(validate):
-        try:
-            await validate(partial=exclude_unset)
-        except ValidationRuleException as exc:
-            errors = exc.errors if exc.errors is not None else [{
-                "loc": list(exc.loc),
-                "msg": exc.message,
-                "type": exc.error_type,
-            }]
-            raise UnprocessableEntityException(error_type="invalid_query", data=errors)
+    # Optional post-parse rule validation for query schemas as well (Schema class from fast-validation)
+    if isinstance(instance, Schema):
+        validate = getattr(instance, "validate", None)
+        if callable(validate):
+            try:
+                await validate(partial=exclude_unset)
+            except ValidationRuleException as exc:
+                errors = exc.errors if exc.errors is not None else [{
+                    "loc": list(exc.loc),
+                    "msg": exc.message,
+                    "type": exc.error_type,
+                }]
+                raise UnprocessableEntityException(error_type="invalid_query", data=errors)
 
     validated = instance.model_dump(exclude_unset=exclude_unset)
     g.validated_query = validated

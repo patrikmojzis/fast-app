@@ -89,7 +89,8 @@ If you pass an unknown package, the CLI prints the list of available ones.
 
 ```python
 from quart import Quart, jsonify, g
-from fast_app import Route, Schema
+from fast_app import Route
+from fast_validation import Schema
 from fast_app.core.api import validate_request
 from fast_app.utils.routing_utils import register_routes
 

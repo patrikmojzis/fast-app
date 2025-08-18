@@ -1,4 +1,4 @@
-from fast_app.core.schema import Schema
+from fast_validation import Schema
 
 
 class NewClass(Schema):

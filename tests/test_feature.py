@@ -1,7 +1,7 @@
 import os
 import pytest
 from quart import Quart, jsonify, g
-from pydantic import BaseModel
+from fast_validation import Schema
 
 from fast_app import Route, Middleware, Model, validate_request
 from fast_app.utils.routing_utils import register_routes
@@ -14,7 +14,7 @@ class Item(Model):
     name: str
 
 
-class ItemSchema(BaseModel):
+class ItemSchema(Schema):
     name: str
 
 
