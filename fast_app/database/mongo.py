@@ -4,6 +4,7 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo import monitoring
 
 from fast_app.utils.database_cache import DatabaseCache
+from fast_app.exceptions import EnvMissingException
 
 mongo: AsyncIOMotorClient = None
 db: AsyncIOMotorDatabase = None
@@ -24,7 +25,7 @@ async def setup_mongo():
     db_name = os.getenv('DB_NAME', 'db') if not os.getenv('TEST_ENV') else os.getenv('TEST_DB_NAME', 'test_db')
 
     if not os.getenv('MONGO_URI'):
-        raise ValueError("Set environment variable `MONGO_URI`")
+        raise EnvMissingException("MONGO_URI")
         
     # Connect to MongoDB
     mongo = AsyncIOMotorClient(os.getenv('MONGO_URI'))

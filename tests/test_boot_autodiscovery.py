@@ -41,7 +41,7 @@ async def test_boot_autodiscovery(tmp_path, monkeypatch):
         "    pass\n"
         "class BootListener(EventListener):\n"
         "    called = False\n"
-        "    async def handle(self):\n"
+        "    async def handle(self, event):\n"
         "        BootListener.called = True\n"
         "events = {BootEvent: [BootListener]}\n"
     )

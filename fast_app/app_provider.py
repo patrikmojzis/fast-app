@@ -1,6 +1,5 @@
-from typing import Any, Dict, List, Type, Optional
+from typing import Any, Dict, List, Type, Optional, TYPE_CHECKING
 
-from fast_app import Event, EventListener
 from fast_app.application import Application
 from fast_app.core.storage import Storage
 from fast_app.core.storage_drivers import get_builtin_storage_drivers
@@ -9,14 +8,18 @@ from fast_app.utils.autodiscovery.model_autodiscovery import autodiscover_models
 from fast_app.utils.env_utils import configure_env
 from fast_app.utils.logging import setup_logging
 
+if TYPE_CHECKING:
+    from fast_app import Event, EventListener
+
 
 def boot(*,
     autodiscovery: bool = True,
-    events: Optional[Dict[Type[Event], List[Type[EventListener]]]] = None,
+    events: Optional[Dict[Type['Event'], List[Type['EventListener']]]] = None,
     env_file_name: Optional[str] = None,
     storage_disks: Optional[Dict[str, Dict[str, Any]]] = None,
     storage_default_disk: Optional[str] = None,
     storage_custom_drivers: Optional[Dict[str, type]] = None,
+    log_file_name: Optional[str] = None,
 ):
     """
     Sets up the application.
@@ -30,6 +33,9 @@ def boot(*,
         events: Optional events configuration. If None, tries autodiscovery from app.event_provider.
     """
     app = Application()
+    if app.is_booted():
+        return
+    
     app.set_boot_args(
         autodiscovery=autodiscovery,
         events=events,
@@ -39,7 +45,7 @@ def boot(*,
     )
     
     configure_env(env_file_name)
-    setup_logging()
+    setup_logging(log_file_name)
     
     # Autodiscover and register observers and policies to models
     if autodiscovery:

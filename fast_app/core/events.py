@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from fast_app.core.queue import queue
-from fast_app.utils.event_utils import _get_event_listeners, _process_event_listener
+from fast_app.utils.event_utils import get_event_listeners, process_event_listener
 
 if TYPE_CHECKING:
     from fast_app.contracts.event import Event
@@ -14,7 +14,7 @@ def dispatch(event: 'Event') -> None:
     Args:
         event: The event instance to dispatch
     """
-    listeners, event_name = _get_event_listeners(event)
+    listeners, event_name = get_event_listeners(event)
     
     if listeners is None:
         return
@@ -23,7 +23,7 @@ def dispatch(event: 'Event') -> None:
     
     # Queue each listener for background processing
     for listener_class in listeners:
-        queue(_process_event_listener, listener_class, event)
+        queue(process_event_listener, listener_class, event)
 
 
 async def dispatch_now(event: 'Event') -> None:
@@ -35,7 +35,7 @@ async def dispatch_now(event: 'Event') -> None:
     Args:
         event: The event instance to dispatch
     """
-    listeners, event_name = _get_event_listeners(event)
+    listeners, event_name = get_event_listeners(event)
     
     if listeners is None:
         return
@@ -44,4 +44,4 @@ async def dispatch_now(event: 'Event') -> None:
     
     # Process each listener immediately
     for listener_class in listeners:
-        await _process_event_listener(listener_class, event)
+        await process_event_listener(listener_class, event)

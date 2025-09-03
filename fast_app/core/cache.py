@@ -59,26 +59,6 @@ class Cache:
         return await r.exists(key) > 0
 
     @classmethod
-    async def increment(cls, key: str, amount: int = 1):
-        """
-        Increment a numeric value in the cache.
-        :param key: The cache key.
-        :param amount: The amount to increment by.
-        :return: The new value.
-        """
-        return await r.incr(key, amount)
-
-    @classmethod
-    async def decrement(cls, key: str, amount: int = 1):
-        """
-        Decrement a numeric value in the cache.
-        :param key: The cache key.
-        :param amount: The amount to decrement by.
-        :return: The new value.
-        """
-        return await r.decr(key, amount)
-
-    @classmethod
     async def remember(cls, key: str, callback: Union[Callable[[], Any], Callable[[], Awaitable[Any]]], expire_in_m: Optional[int] = None):
         """
         Get an item from the cache, or store the default value.

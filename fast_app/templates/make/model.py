@@ -1,5 +1,5 @@
-from fast_app import Model as BaseModel
+from fast_app import Model
 
 
-class NewClass(BaseModel):
+class NewClass(Model):
     pass

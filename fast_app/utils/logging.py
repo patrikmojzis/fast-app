@@ -4,8 +4,9 @@ import sys
 from pathlib import Path
 
 _logging_configured = False
+_log_file_path: Path | None = None
 
-def setup_logging():
+def setup_logging(log_file_name: str | None = None):
     """
     Setup logging for the application.
 
@@ -17,17 +18,18 @@ def setup_logging():
     - DEBUG
     - NOTSET
     """
-    global _logging_configured
-    
-    # Prevent multiple configuration
-    if _logging_configured:
-        return
+    global _logging_configured, _log_file_path
     
     # Get the project root directory (where this script's parent's parent is)
     project_root = Path(__file__).parent.parent.parent
     log_dir = project_root / "log"
-    log_file = log_dir / "app.log"
+    file_name = log_file_name if log_file_name else os.getenv('LOG_FILE_NAME', 'app.log')
+    log_file = log_dir / file_name
     
+    # If already configured and path matches, skip reconfiguration
+    if _logging_configured and _log_file_path == log_file:
+        return
+
     # Ensure log directory exists
     log_dir.mkdir(exist_ok=True)
     
@@ -67,5 +69,11 @@ def setup_logging():
     # Install the global exception handler
     sys.excepthook = log_uncaught_exception
     
+    _log_file_path = log_file
+
     _logging_configured = True
     logging.info("Logging configured successfully with global exception handling")
+
+
+def get_log_file_path() -> Path | None:
+    return _log_file_path

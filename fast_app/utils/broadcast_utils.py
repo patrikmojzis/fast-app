@@ -1,30 +1,39 @@
 import os
-from typing import TYPE_CHECKING
+import json
+from typing import TYPE_CHECKING, Optional, Literal, Any, Union, TypedDict
+import importlib
 
 import redis.asyncio as redis
 
 from fast_app.contracts.websocket_event import WebsocketEvent
+from fast_app.contracts.resource import Resource
+from fast_app.utils.serialisation import serialise    
+from fast_app.contracts.room import Room
 
-if TYPE_CHECKING:
-    from fast_app.contracts.broadcast_event import BroadcastEvent
 
+async def transform_broadcast_data(data: Any) -> dict:
+    """Transform broadcast data from Resource or BaseModel, otherwise return the data as is."""  
+    if isinstance(data, Resource):  
+        return await data.dump()
 
-redis_broadcast_client = redis.Redis(
-    host=os.getenv("REDIS_HOST", "localhost"), 
-    port=int(os.getenv("REDIS_PORT", 6379)), 
-    db=int(os.getenv("REDIS_BROADCAST_DB", 3))
-)
-
-async def convert_broadcast_event_to_websocket_event(event: 'BroadcastEvent') -> WebsocketEvent:
-    """Transform broadcast data into a WebsocketEvent."""
-    data = await event.broadcast_as()
-
-    if isinstance(data, WebsocketEvent):
-        return data
+    if hasattr(data, "model_dump"):
+        return data.model_dump()
     
-    event_type = event.get_event_type()
+    return data
+
+
+class BroadcastOn(TypedDict):
+    room: str
+    namespace: Optional[str] = None
+
+async def get_broadcast_ons(room: Union[str, 'Room', list[Union[str, 'Room']]]) -> list[BroadcastOn]:
+    items = room if isinstance(room, list) else [room]
+    broadcast_ons: list[BroadcastOn] = []
+
+    for item in items:
+        if isinstance(item, str):
+            broadcast_ons.append({"room": item})
+        else:
+            broadcast_ons.append({"room": item.get_room_name(), "namespace": item.namespace})
     
-    if hasattr(data, "dump"):  # If is resource
-        return WebsocketEvent(type=event_type, data=await data.dump())
-    
-    return WebsocketEvent(type=event_type, data=data)
+    return broadcast_ons

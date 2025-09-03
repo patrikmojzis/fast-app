@@ -1,12 +1,16 @@
-"""Run a migration from app/db/migrations."""
+"""Run a migration from app/db/migrations.
+
+Supports both legacy functions and new contract-based migrations.
+"""
 
 import argparse
 import importlib.util
 from pathlib import Path
 from types import ModuleType
-from typing import Callable, Optional
+from typing import Callable, Optional, Any
 
 from fast_app.utils.serialisation import pascal_case_to_snake_case
+from fast_app.contracts.migration import Migration
 
 from .command_base import CommandBase
 
@@ -36,17 +40,21 @@ class MigrateCommand(CommandBase):
             print("❌ Failed to load migration module")
             return
 
-        # Prefer `migrate()` function; fallback to `run()` or Class.migrate()/Class.run()
+        # Prefer new contract class; fallback to functions
+        contract = self._resolve_contract(module, migration_name)
+        if contract is not None:
+            return self._run_contract(contract, migration_name)
+
         runner = self._resolve_runner(module, migration_name)
-        if runner is None:
-            print("❌ No runner found. Define `migrate()` or `run()`, or a class with `migrate()`/`run()`.")
+        if runner is not None:
+            try:
+                runner()
+                print(f"✅ Migration executed: {migration_name}")
+            except Exception as exc:  # noqa: BLE001
+                print(f"❌ Migration failed: {exc}")
             return
 
-        try:
-            runner()
-            print(f"✅ Migration executed: {migration_name}")
-        except Exception as exc:  # noqa: BLE001
-            print(f"❌ Migration failed: {exc}")
+        print("❌ No migration entry found. Provide a Migration class with async migrate(), or legacy `migrate()`/`run()`.")
 
     def _load_module(self, path: Path) -> Optional[ModuleType]:
         spec = importlib.util.spec_from_file_location(path.stem, path)
@@ -75,5 +83,27 @@ class MigrateCommand(CommandBase):
             if callable(run_method):
                 return run_method
         return None
+
+    def _resolve_contract(self, module: ModuleType, migration_name: str) -> Optional[Migration]:
+        # Class named migration_name implements Migration
+        cls = getattr(module, migration_name, None)
+        if isinstance(cls, type) and issubclass(cls, Migration):
+            return cls()  # type: ignore[call-arg]
+        # Fallback: class named Migration
+        cls2 = getattr(module, "Migration", None)
+        if isinstance(cls2, type) and issubclass(cls2, Migration):
+            return cls2()  # type: ignore[call-arg]
+        return None
+
+    def _run_contract(self, contract: Migration, migration_name: str) -> None:
+        import asyncio
+        async def _run() -> Any:
+            contract.boot()
+            return await contract.migrate()
+        try:
+            asyncio.run(_run())
+            print(f"✅ Migration executed: {migration_name}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"❌ Migration failed: {exc}")
 
 

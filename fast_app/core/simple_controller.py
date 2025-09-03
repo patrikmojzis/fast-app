@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from fast_app import Model
     from fast_app.contracts.resource import Resource
     from pydantic import BaseModel
+    from fast_app import Schema
 
 
 async def _get_model_by_id(id: str, Model: 'Model'):

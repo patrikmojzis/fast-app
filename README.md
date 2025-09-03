@@ -28,9 +28,9 @@ fast-app init
 4) Run a module
 
 ```bash
-fast-app run api        # runs: python -m app.modules.api
+fast-app run api        # runs: python -m app.modules.asgi
 # or
-fast-app run cron       # runs: python -m app.modules.cron
+fast-app run scheduler  # runs: python -m app.modules.scheduler
 ```
 
 ## CLI overview
@@ -153,9 +153,9 @@ Schema validation in a handler
 ```python
 from quart import jsonify, g
 from pydantic import BaseModel
-from fast_app.core.api import validate_request
+from fast_app import validate_request, Schema
 
-class ItemSchema(BaseModel):
+class ItemSchema(Schema):
     name: str
 
 async def create_item():
@@ -255,14 +255,14 @@ def do_work():
 queue(do_work)
 ```
 
-### cron
+### scheduler
 
-Minimal cron runner using Redis for distributed locks.
+Minimal scheduler using Redis for distributed locks.
 
 ```python
-from fast_app.core.cron import run_cron
+from fast_app.core.scheduler import run_scheduler
 
-asyncio.run(run_cron([
+asyncio.run(run_scheduler([
     {"run_every_s": 60, "function": do_work},   # pass function reference, no parentheses
 ]))
 ```
@@ -276,7 +276,7 @@ Helpers for broadcast channels and events. Pair with contracts `BroadcastEvent`/
 Minimal environment to get started locally:
 
 - MongoDB (for `Model`): set `MONGO_URL` (see your project’s settings)
-- Redis (for queue/cron): `REDIS_HOST`, `REDIS_PORT`
+- Redis (for queue/scheduler): `REDIS_HOST`, `REDIS_PORT`
 - Queue mode: `QUEUE_DRIVER=sync` (default) or `QUEUE_DRIVER=rq`
 
 Run via Docker in a generated project:
@@ -336,7 +336,7 @@ Helpers in `fast_app/decorators/model_decorators.py` you can use explicitly or l
 - `@register_policy(PolicyClass)` — sets `model.policy`
 - `@register_search_relation(field, model, search_fields)` — adds cross‑model search relation metadata
 - `@authorizable` — mixin that adds `Authorizable` capabilities to a model
-- `@routes_notifications` — mixin that adds notification routing helpers
+- `@notifiable` — mixin that adds notification routing helpers
 
 You can apply these manually, or rely on autodiscovery naming conventions to attach observers/policies automatically during `boot()`.
 

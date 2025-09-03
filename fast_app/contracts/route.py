@@ -1,4 +1,5 @@
 from typing import Callable, Optional, Union, List
+from typing_extensions import deprecated
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -50,16 +51,6 @@ class Route(BaseModel):
     @classmethod
     def head(cls, path: str, handler: Callable, middlewares: Optional[List[Union[Middleware, Callable]]] = None) -> 'Route':
         return cls(path=path, handler=handler, methods=["HEAD"], middlewares=middlewares)
-
-    # WebSocket route method
-    @classmethod
-    def websocket(
-        cls,
-        path: str,
-        handler: Callable,
-        middlewares: Optional[List[Union[Middleware, Callable]]] = None,
-    ) -> 'Route':
-        return cls(path=path, handler=handler, methods=None, middlewares=middlewares, is_websocket=True)
     
     # Route grouping method
     @classmethod

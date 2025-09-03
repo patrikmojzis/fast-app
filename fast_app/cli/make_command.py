@@ -4,8 +4,16 @@ import argparse
 import re
 from pathlib import Path
 
-from fast_app.utils.serialisation import pascal_case_to_snake_case, snake_case_to_pascal_case
+from fast_app.utils.serialisation import (
+    pascal_case_to_snake_case,
+    snake_case_to_pascal_case,
+    is_pascal_case,
+    is_snake_case,
+)
 from .command_base import CommandBase
+
+
+TEMPLATES_PATH = Path(__file__).parent.parent / "templates"
 
 
 class MakeCommand(CommandBase):
@@ -13,8 +21,7 @@ class MakeCommand(CommandBase):
     
     TYPE_PATHS = {
         'event': 'app/events',
-        'broadcast_event': 'app/events',
-        'websocket_event': 'app/events',
+        'broadcast_event': 'app/socketio/events',
         'listener': 'app/listeners', 
         'model': 'app/models',
         'notification': 'app/notifications',
@@ -24,12 +31,13 @@ class MakeCommand(CommandBase):
         'resource': 'app/http_files/resources',
         'schema': 'app/http_files/schemas',
         'middleware': 'app/http_files/middlewares',
-        'broadcast_channel': 'app/broadcasting',
         'storage_driver': 'app/storage_drivers',
         'validator_rule': 'app/rules',
         'factory': 'app/db/factories',
         'seeder': 'app/db/seeders',
         'migration': 'app/db/migrations',
+        'command': 'app/cli',
+        'room': 'app/socketio/rooms',
     }
     
     @property
@@ -52,13 +60,19 @@ class MakeCommand(CommandBase):
             print(f"Available: {', '.join(self.TYPE_PATHS.keys())}")
             return
         
-        template_path = self.template_path / "make" / f"{args.type}.py"
+        template_path = TEMPLATES_PATH / "make" / f"{args.type}.py"
         if not template_path.exists():
             print(f"❌ Template not found: {template_path}")
             return
         
-        class_name = snake_case_to_pascal_case(args.name)
-        file_name = pascal_case_to_snake_case(class_name)
+        # Determine provided name style; default to snake_case if uncertain
+        if is_pascal_case(args.name):
+            class_name = args.name
+            file_name = pascal_case_to_snake_case(class_name)
+        else:
+            # Treat any non-Pascal input as snake_case by default
+            class_name = snake_case_to_pascal_case(args.name)
+            file_name = args.name if is_snake_case(args.name) else pascal_case_to_snake_case(class_name)
         
         content = self._process_template(template_path, args.type, class_name)
         dest_file = self._get_destination(args.type, file_name)

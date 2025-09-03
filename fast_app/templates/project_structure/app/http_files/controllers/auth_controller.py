@@ -1,6 +1,5 @@
 from quart import g, Response
 
-from app.http_files.middlewares.auth_middleware import protected_route
 from app.http_files.resources.auth_resource import AuthResource
 from app.http_files.schemas.auth_refresh_schema import AuthRefreshSchema
 from app.models.auth import Auth
@@ -23,7 +22,7 @@ from fast_app.exceptions.http_exceptions import UnauthorisedException
 #         # 'identifier': request.headers.get('X-Device-Id'),  # Optional custom device ID or login source
 #     })
     
-#     return await AuthResource(auth).to_response()
+#     return AuthResource(auth)
     
 
 async def refresh():
@@ -43,7 +42,7 @@ async def refresh():
 
     await auth.revoke()  # Revoke the old refresh token
     
-    return await AuthResource(new_auth).to_response()
+    return AuthResource(new_auth)
 
 
 async def logout():

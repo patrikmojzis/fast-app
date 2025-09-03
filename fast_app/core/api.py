@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional, Literal
+from typing import Optional, Literal, Union, TypeVar
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError, BaseModel, Field
@@ -19,7 +19,8 @@ if TYPE_CHECKING:
 if TYPE_CHECKING:
     from fast_app.contracts.model import Model
     from fast_app.contracts.resource import Resource
-    from pydantic import BaseModel
+
+S = TypeVar("S", bound=BaseModel)
 
 def get_client_ip() -> str:
     """Get the client IP address from the request.
@@ -124,11 +125,11 @@ async def search_paginated(model: 'Model', resource: 'Resource', *, query_param:
         query_param = {}
 
     params = await validate_query(PaginationQuery)
-    page = params["page"]
-    per_page = params["per_page"]
-    search = params.get("search")
-    sort_by = params.get("sort_by")
-    sort_direction = params.get("sort_direction")
+    page = params.page
+    per_page = params.per_page
+    search = params.search
+    sort_by = params.sort_by
+    sort_direction = params.sort_direction
 
     # Build sort query
     if sort_by and sort_direction:
@@ -152,10 +153,10 @@ async def list_paginated(model: 'Model', resource: 'Resource', *, query_param: d
         query_param = {}
 
     params = await validate_query(PaginationQuery)
-    page = params["page"]
-    per_page = params["per_page"]
-    sort_by = params.get("sort_by")
-    sort_direction = params.get("sort_direction")
+    page = params.page
+    per_page = params.per_page
+    sort_by = params.sort_by
+    sort_direction = params.sort_direction
 
     # Build sort query
     if sort_by and sort_direction:
@@ -181,32 +182,52 @@ async def list_paginated(model: 'Model', resource: 'Resource', *, query_param: d
         'data': await resource(result).dump(),
     })
 
-async def validate_request(schema: BaseModel | object, *, exclude_unset: bool = False):
-    """Validate the request body against the schema.
+def _sanitize_pydantic_errors(errors: list[dict]) -> list[dict]:
+    """Return a minimal, JSON-safe error payload.
+
+    Keeps only keys that are safe and useful for clients: loc, msg, type.
+    Drops potentially sensitive or non-serialisable fields such as ctx/input/url.
+    """
+    sanitized: list[dict] = []
+    for err in errors:
+        sanitized.append({
+            k: v
+            for k, v in err.items()
+            if k in ("loc", "msg", "type")
+        })
+    return sanitized
+
+async def validate_request(schema: type[S], *, partial: bool = False) -> S:
+    """
+    Validate the request body against the schema. 
+    Stores the validated _dictionary_ in `g.validated`.
 
     Args:
         schema: The schema to validate the request body against.
-        exclude_unset: Whether to exclude unset fields from the validated data.
+        partial: Whether to exclude unset fields from the validated data.
 
     Returns:
-        The validated data.
+        The validated schema .
 
     Raises:
         UnprocessableEntityException: If the request body is invalid.
     """
     json_data = await request.get_json()
     try:
-        instance = schema(**json_data)
+        instance = schema(**(json_data if json_data is not None else {}))
     except ValidationError as e:
         # Only catch pydantic parsing here
-        raise UnprocessableEntityException(error_type="invalid_request", data=e.errors())
+        raise UnprocessableEntityException(
+            error_type="invalid_request",
+            data=_sanitize_pydantic_errors(e.errors()),
+        )
 
     # Optional post-parse rule validation if the schema supports it (Schema class from fast-validation)
     if isinstance(instance, Schema):
         validate = getattr(instance, "validate", None)
         if callable(validate):
             try:
-                await validate(partial=exclude_unset)
+                await validate(partial=partial)
             except ValidationRuleException as exc:
                 errors = exc.errors if exc.errors is not None else [{
                     "loc": list(exc.loc),
@@ -215,9 +236,11 @@ async def validate_request(schema: BaseModel | object, *, exclude_unset: bool = 
                 }]
                 raise UnprocessableEntityException(error_type="invalid_request", data=errors)
 
-    g.validated = instance.model_dump(exclude_unset=exclude_unset)
+    validated = instance.model_dump(exclude_unset=partial)
+    g.validated = validated
+    return instance
 
-def get_query(schema: 'BaseModel') -> dict:
+def get_query(schema: type[BaseModel]) -> dict:
     """Extract query params tailored to a Pydantic schema without validating.
 
     - For List[...] fields, collect multiple values using getlist and key[] styles,
@@ -242,23 +265,36 @@ def get_query(schema: 'BaseModel') -> dict:
                     query_data[field_name] = list_values[0]
     return query_data
 
-async def validate_query(schema: BaseModel | object, *, exclude_unset: bool = False):
-    """Validate the request query parameters against the schema.
-    
-    Stores the validated dictionary in `g.validated_query` and returns it.
+async def validate_query(schema: type[S], *, partial: bool = False) -> S:
+    """
+    Validate the request query parameters against the schema. 
+    Stores the validated dictionary in `g.validated_query`
+
+    Args:
+        schema: The schema to validate the query parameters against.
+        partial: Whether to exclude unset fields from the validated data.
+
+    Returns:
+        The validated data.
+
+    Raises:
+        UnprocessableEntityException: If the query parameters are invalid.
     """
     query_data = get_query(schema)
     try:
         instance = schema(**query_data)
     except ValidationError as e:
-        raise UnprocessableEntityException(error_type="invalid_query", data=e.errors())
+        raise UnprocessableEntityException(
+            error_type="invalid_query",
+            data=_sanitize_pydantic_errors(e.errors()),
+        )
 
     # Optional post-parse rule validation for query schemas as well (Schema class from fast-validation)
     if isinstance(instance, Schema):
         validate = getattr(instance, "validate", None)
         if callable(validate):
             try:
-                await validate(partial=exclude_unset)
+                await validate(partial=partial)
             except ValidationRuleException as exc:
                 errors = exc.errors if exc.errors is not None else [{
                     "loc": list(exc.loc),
@@ -267,10 +303,9 @@ async def validate_query(schema: BaseModel | object, *, exclude_unset: bool = Fa
                 }]
                 raise UnprocessableEntityException(error_type="invalid_query", data=errors)
 
-    validated = instance.model_dump(exclude_unset=exclude_unset)
+    validated = instance.model_dump(exclude_unset=partial)
     g.validated_query = validated
-    return validated
-
+    return instance
 
 def get_mongo_filter_from_query(
     *,

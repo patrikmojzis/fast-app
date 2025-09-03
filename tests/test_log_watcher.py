@@ -36,13 +36,11 @@ async def test_send_log_errors_via_slack(monkeypatch):
 
     fake_errors = [{"level": "ERROR", "timestamp": "t", "logger": "root", "message": "m", "traceback": "tb"}]
 
-    class FakeChecker:
-        def __init__(self, check_minutes):
-            pass
-        def get_error_entries(self):
-            return fake_errors
+    # Patch the new aggregation helper rather than the checker class
+    def fake_gather(*, check_minutes, log_file_paths=None):
+        return fake_errors
 
-    monkeypatch.setattr(module, "LogErrorsChecker", FakeChecker)
+    monkeypatch.setattr(module, "gather_error_entries", lambda **kwargs: fake_gather(**kwargs))
 
     captured = {}
 

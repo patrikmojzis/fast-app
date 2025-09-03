@@ -21,7 +21,7 @@ def cached(expire_in_s: Optional[int] = 5) -> Callable:
             key = _make_cache_key(func, args, kwargs)
             cached_result = DatabaseCache.get(key)
             if cached_result is not None:
-                print(f"Cache hit for {key}")
+                # print(f"Cache hit for {key}")
                 return cached_result
             result = await func(*args, **kwargs)
             DatabaseCache.set(key, result, expire_in_s)
@@ -32,7 +32,7 @@ def cached(expire_in_s: Optional[int] = 5) -> Callable:
             key = _make_cache_key(func, args, kwargs)
             cached_result = DatabaseCache.get(key)
             if cached_result is not None:
-                print(f"Cache hit for {key}")
+                # print(f"Cache hit for {key}")
                 return cached_result
             result = func(*args, **kwargs)
             DatabaseCache.set(key, result, expire_in_s)

@@ -1,15 +1,17 @@
 import asyncio
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Union
 
 from quart import jsonify, Response
 
-from fast_app.contracts.model import Model
 from fast_app.utils.serialisation import serialise
 
+if TYPE_CHECKING:
+    from fast_app.contracts.model import Model
 
 class Resource(ABC):
 
-    def __init__(self, data: Model | list[Model]):
+    def __init__(self, data: Union['Model', list['Model']]):
         """
         Base class for all resources. Put Model or list[Model] in the constructor.
         """
@@ -19,10 +21,11 @@ class Resource(ABC):
         """
         Dump the resource to a dictionary or list of dictionaries.
         """
-        if isinstance(self._data, Model):
-            data = await self.to_dict(self._data)
+        if isinstance(self._data, list):
+            data = await asyncio.gather(*(self.to_dict(res) for res in self._data))
         else:
-            data = await asyncio.gather(*(self.to_dict(res) for res in self._data)) 
+            data = await self.to_dict(self._data)
+            
         return serialise(data)
 
     async def to_response(self) -> Response:
@@ -32,7 +35,7 @@ class Resource(ABC):
         return jsonify(await self.dump())
 
     @abstractmethod
-    async def to_dict(self, data: Model) -> dict:
+    async def to_dict(self, data: 'Model') -> dict:
         """
         Set up the resource to be dumped.
         """

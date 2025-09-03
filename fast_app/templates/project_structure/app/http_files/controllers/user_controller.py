@@ -1,4 +1,3 @@
-from app.http_files.middlewares.auth_middleware import protected_route
 from app.http_files.resources.user_resource import UserResource
 from app.http_files.schemas.user_schema import UserSchema
 from app.models.user import User

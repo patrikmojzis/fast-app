@@ -2,7 +2,6 @@ import importlib
 import inspect
 from pathlib import Path
 
-from fast_app import Model, Observer, Policy
 from fast_app.decorators import register_observer, register_policy
 
 
@@ -23,6 +22,7 @@ def autodiscover_models() -> None:
         observers_dir: The directory containing the observers.
         policies_dir: The directory containing the policies.
     """
+    from fast_app import Model, Observer, Policy
 
     models_dir = Path("app/models")
     

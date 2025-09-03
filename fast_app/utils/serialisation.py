@@ -53,5 +53,35 @@ def snake_case_to_pascal_case(snake: str) -> str:
     return ''.join(word.capitalize() for word in components)
 
 
+def is_snake_case(name: str) -> bool:
+    """
+    Basic check whether a string looks like snake_case.
+
+    Accepts lowercase letters and digits separated by single underscores.
+    """
+    return re.fullmatch(r"[a-z]+(?:_[a-z0-9]+)*", name) is not None
+
+
+def is_pascal_case(name: str) -> bool:
+    """
+    Basic check whether a string looks like PascalCase.
+
+    Accepts sequences starting with an uppercase letter and then alphanumerics.
+    """
+    return re.fullmatch(r"[A-Z][A-Za-z0-9]*", name) is not None
+
+
 def get_exception_error_type(exception: Exception) -> str:
     return pascal_case_to_snake_case(exception.__class__.__name__.lower().replace('exception', ''))
+
+
+def remove_suffix(text: str, suffix: str) -> str:
+    """
+    Remove an exact suffix from the given text if present.
+
+    Unlike str.rstrip, this removes only the provided suffix once,
+    not any combination of its characters.
+    """
+    if text.endswith(suffix):
+        return text[: -len(suffix)]
+    return text

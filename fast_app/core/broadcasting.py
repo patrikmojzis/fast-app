@@ -1,25 +1,25 @@
 import json
-from typing import TYPE_CHECKING
+import importlib
+import asyncio
+import socketio
+from typing import TYPE_CHECKING, AsyncGenerator, Any, Optional, Union
 
-from fast_app.contracts.broadcast_channel import BroadcastChannel
 from fast_app.utils.broadcast_utils import (
-    convert_broadcast_event_to_websocket_event,
-    redis_broadcast_client,
+    transform_broadcast_data,
+    get_broadcast_ons,
 )
+from fast_app.decorators.deprecated_decorator import deprecated
+
 
 if TYPE_CHECKING:
     from fast_app.contracts.broadcast_event import BroadcastEvent
-
-
-async def publish_to_channel(channel_name: str, data: 'WebsocketEvent | dict[str, Any]') -> None:
-    """Publish either a websocket event or a dictionary to a channel."""
-    payload = data.model_dump_json() if hasattr(data, "model_dump_json") else json.dumps(data)
-    await redis_broadcast_client.publish(channel_name, payload)
+    from fast_app.contracts.websocket_event import WebsocketEvent
+    from quart import Websocket
 
 
 async def broadcast(event: 'BroadcastEvent') -> bool:
     """
-    Broadcast an event through the configured channel.
+    Broadcast an event on the configured rooms.
     
     Returns True if broadcast was successful, False otherwise.
     """
@@ -27,26 +27,21 @@ async def broadcast(event: 'BroadcastEvent') -> bool:
     if not await event.broadcast_when():
         return False
     
-    # Get the channel
-    channel = await event.broadcast_on()
-    if not channel:
-        return False
-    
-    # Verify channel permissions
-    if isinstance(channel, BroadcastChannel) and not await channel.can_broadcast():
+    # Get the channel and verify permissions
+    broadcast_ons = await get_broadcast_ons(await event.broadcast_on())
+    if not broadcast_ons:
         return False
     
     # Prepare the event data
-    websocket_event = await convert_broadcast_event_to_websocket_event(event)
-    
-    # Get channel name
-    channel_name = (
-        await channel.get_channel_name() 
-        if isinstance(channel, BroadcastChannel) 
-        else channel
-    )
+    payload = await transform_broadcast_data(await event.broadcast_as())
     
     # Publish to Redis
-    await redis_broadcast_client.publish(channel_name, websocket_event.model_dump_json())
+    mgr = socketio.AsyncRedisManager("redis://localhost:6379/0")
+    await asyncio.gather(*(mgr.emit(
+        event.get_event_name(), 
+        payload, 
+        room=broadcast_on.get("room"), 
+        namespace=broadcast_on.get("namespace")
+        ) for broadcast_on in broadcast_ons))
     
     return True

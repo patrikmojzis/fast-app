@@ -1,7 +1,9 @@
 import logging
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, TypedDict
+from fast_app.utils.logging import get_log_file_path
+from typing import Iterable, List, TypedDict
 
 # Shared helpers for jobs
 DEFAULT_LOG_ERRORS_CHECK_MINUTES: int = 5
@@ -21,7 +23,13 @@ class LogErrorsChecker:
         self.log_file_path = log_file_path
 
         if not self.log_file_path:
-            self.log_file_path = Path(__file__).parent.parent.parent.parent.parent / "log" / "app.log"
+            configured = get_log_file_path()
+            if configured is not None:
+                self.log_file_path = configured
+            else:
+                # Default to project root /log when used in user projects
+                project_root = Path(os.getcwd())
+                self.log_file_path = project_root / "log" / "app.log"
 
     def parse_timestamp(self, timestamp_str: str) -> datetime:
         """Parse timestamp from log entry"""
@@ -114,3 +122,17 @@ def process_traceback(traceback_lines: List[str]) -> List[str]:
         last_10 = traceback_lines[-10:]
         return first_10 + ["... (middle of traceback omitted) ..."] + last_10
     return traceback_lines
+
+
+def gather_error_entries(*, check_minutes: int, log_file_paths: Iterable[Path] | None = None) -> List[LogErrorEntry]:
+    """Collect error entries from one or multiple log files.
+
+    If `log_file_paths` is None or empty, uses the default configured log file.
+    """
+    if log_file_paths:
+        errors: List[LogErrorEntry] = []
+        for p in log_file_paths:
+            checker = LogErrorsChecker(check_minutes=check_minutes, log_file_path=Path(p))
+            errors.extend(checker.get_error_entries())
+        return errors
+    return LogErrorsChecker(check_minutes=check_minutes).get_error_entries()

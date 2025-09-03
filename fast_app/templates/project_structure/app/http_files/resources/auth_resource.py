@@ -7,9 +7,9 @@ if TYPE_CHECKING:
 
 class AuthResource(Resource):
 
-    def to_dict(self, auth: 'Auth'):
+    async def to_dict(self, auth: 'Auth') -> dict:
         return {
             "token_type": "bearer",
-            "access_token": auth.refresh_token,
-            "refresh_token": auth.create_access_token(),
+            "access_token": auth.create_access_token(),
+            "refresh_token": auth.refresh_token,
         }

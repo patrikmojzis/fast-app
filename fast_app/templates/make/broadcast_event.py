@@ -1,14 +1,20 @@
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 from fast_app import BroadcastEvent
 
-if False:
-    # for typing only
-    from fast_app import BroadcastChannel
+if TYPE_CHECKING:
+    from fast_app import Room
 
 
 class NewClass(BroadcastEvent):
-    async def broadcast_on(self, *args, **kwargs) -> Union[str, 'BroadcastChannel']:
-        return 'public'
+    # Define event data fields in pydantic way
+    # e.g.
+    # name: str = Field(..., description="The name of the event")
+    # description: str = Field(..., description="The description of the event")
+    # ...
+    # or define broadcast_as() 
+    
+    async def broadcast_on(self) -> Union[str, 'Room']:
+        return 'room_name'
 
 

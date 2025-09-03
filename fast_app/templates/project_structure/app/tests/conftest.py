@@ -5,7 +5,7 @@ import os
 
 import pytest_asyncio
 
-from app.modules.api import create_app
+from app.modules.asgi import create_app
 
 
 @pytest_asyncio.fixture(scope="function")

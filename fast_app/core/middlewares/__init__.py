@@ -7,11 +7,17 @@ can be imported directly from :mod:`fast_app`.
 from .etag_middleware import EtagMiddleware
 from .handle_exceptions_middleware import HandleExceptionsMiddleware
 from .handle_http_exceptions_middleware import HandleHttpExceptionsMiddleware
-from .handle_websocket_exceptions_middleware import HandleWebsocketExceptionsMiddleware
+from .resource_response_middleware import ResourceResponseMiddleware
+from .model_binding_middleware import ModelBindingMiddleware
+from .schema_validation_middleware import SchemaValidationMiddleware
+from .throttle_middleware import ThrottleMiddleware
 
 __all__ = [
     "EtagMiddleware",
     "HandleExceptionsMiddleware",
     "HandleHttpExceptionsMiddleware",
-    "HandleWebsocketExceptionsMiddleware",
+    "ResourceResponseMiddleware",
+    "ModelBindingMiddleware",
+    "SchemaValidationMiddleware",
+    "ThrottleMiddleware",
 ]

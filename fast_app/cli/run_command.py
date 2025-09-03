@@ -16,12 +16,12 @@ class RunCommand(CommandBase):
 
     @property
     def help(self) -> str:
-        return "Run a module: fast-app run <module_name> (e.g., api, cron)"
+        return "Run a module: fast-app run <module_name> (e.g., api, scheduler)"
 
     def configure_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "module_name",
-            help="Module name under app.modules to run (e.g., api, cron)",
+            help="Module name under app.modules to run (e.g., api, scheduler)",
         )
 
     def execute(self, args: argparse.Namespace) -> None:

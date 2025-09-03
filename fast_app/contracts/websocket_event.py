@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Any, Optional
 import time
-from fast_app.utils.serialisation import pascal_case_to_snake_case
+from fast_app.utils.serialisation import pascal_case_to_snake_case, remove_suffix
 import time
 from typing import Any, Optional
 
@@ -19,5 +19,5 @@ class WebsocketEvent(BaseModel):
     @classmethod
     def validate_type(cls, v: Optional[str]) -> str:
         if v is None:
-            return pascal_case_to_snake_case(cls.__name__).rstrip("_event")
+            return remove_suffix(pascal_case_to_snake_case(cls.__name__), "_event")
         return v

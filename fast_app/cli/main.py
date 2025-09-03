@@ -10,6 +10,9 @@ from .run_command import RunCommand
 from .seed_command import SeedCommand
 from .migrate_command import MigrateCommand
 from .version_command import VersionCommand
+from .exec_command import ExecCommand
+from .work_command import WorkCommand
+from .serve_command import ServeCommand
 
 
 def main() -> None:
@@ -27,6 +30,8 @@ def main() -> None:
         MakeCommand(), 
         PublishCommand(),
         RunCommand(),
+        WorkCommand(),
+        ServeCommand(),
         SeedCommand(),
         MigrateCommand(),
         VersionCommand(),
@@ -37,6 +42,12 @@ def main() -> None:
         cmd_parser = subparsers.add_parser(command.name, help=command.help)
         command.configure_parser(cmd_parser)
         command_map[command.name] = command
+
+    # exec subcommand for app-local commands
+    exec_cmd = ExecCommand()
+    exec_parser = subparsers.add_parser(exec_cmd.name, help=exec_cmd.help)
+    exec_cmd.configure_parser(exec_parser)
+    command_map[exec_cmd.name] = exec_cmd
     
     args = parser.parse_args()
     
