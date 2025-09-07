@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import signal
 import time
@@ -11,35 +12,38 @@ from typing import Dict, List, Optional, TypedDict
 import aio_pika
 from aio_pika import ExchangeType
 
-from fast_app.utils.async_farm_utils import await_processes_death
+from fast_app.utils.async_farm_utils import await_processes_death, decode_message
 
 
 class WorkerState(TypedDict):
     process: Process
     active_tasks: int
-    ts: float
+    start_timestamp: float
+    last_heartbeat_timestamp: Optional[float]
 
 
 RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
 JOBS_QUEUE = os.getenv("ASYNC_FARM_JOBS_QUEUE", "async_farm.jobs")
-CONTROL_EXCHANGE = os.getenv("ASYNC_FARM_CONTROL_EXCHANGE", "async_farm.control")
+SUPERVISOR_TO_WORKERS_EXCHANGE = os.getenv("ASYNC_FARM_CONTROL_EXCHANGE", "async_farm.supervisor")
+WORKER_TO_SUPERVISOR_EXCHANGE = os.getenv("ASYNC_FARM_WORKER_EXCHANGE", "async_farm.worker")
+
 HEARTBEAT_INTERVAL_S = int(os.getenv("HEARTBEAT_INTERVAL_S", "5"))
 
 
-def _worker_entry(manager_id: str) -> None:
+def _worker_entry(supervisor_id: str) -> None:
     import asyncio as _asyncio
     import os as _os
     from fast_app.integrations.async_farm.worker import AsyncFarmWorker
 
-    _os.environ["MANAGER_ID"] = manager_id
-    worker = AsyncFarmWorker(manager_id=manager_id)
+    _os.environ["SUPERVISOR_ID"] = supervisor_id
+    worker = AsyncFarmWorker(supervisor_id=supervisor_id)
     _asyncio.run(worker.start())
 
 
 class AsyncFarmSupervisor:
     def __init__(self) -> None:
         # Scaling params
-        self.min_workers = int(os.getenv("MIN_WORKERS", "2"))
+        self.min_workers = int(os.getenv("MIN_WORKERS", "1"))
         self.max_workers = int(os.getenv("MAX_WORKERS", "10"))
         self.scale_check_interval = float(os.getenv("SCALE_CHECK_INTERVAL_S", "1"))
         self.scale_up_batch_size = int(os.getenv("SCALE_UP_BATCH_SIZE", "2"))
@@ -48,7 +52,7 @@ class AsyncFarmSupervisor:
         self.shutdown_grace_s = int(os.getenv("WORKER_SHUTDOWN_GRACE_S", "15"))
 
         # State
-        self.manager_id = f"manager_{os.getpid()}_{int(time.time())}"
+        self.supervisor_id = f"manager_{os.getpid()}_{int(time.time())}"
         self.workers: Dict[str, WorkerState] = {}  # associated workers
         self.pending_processes: List[Process] = []  # just spawned workers
         self.shutdown_requested = False
@@ -56,31 +60,23 @@ class AsyncFarmSupervisor:
         # Connections
         self.connection: Optional[aio_pika.RobustConnection] = None
         self.channel: Optional[aio_pika.RobustChannel] = None
-        self.jobs_queue: Optional[aio_pika.Queue] = None
-        self.control_exchange: Optional[aio_pika.Exchange] = None
-        self.supervisor_queue: Optional[aio_pika.Queue] = None
+        self.supervisor_to_workers_exchange: Optional[aio_pika.RobustExchange] = None
+        self.worker_to_supervisor_exchange: Optional[aio_pika.RobustExchange] = None
+        self.jobs_queue: Optional[aio_pika.RobustQueue] = None
+        self.supervisor_queue: Optional[aio_pika.RobustQueue] = None
 
     # ---------------- lifecycle ----------------
     async def start(self) -> None:
-        print(f"🚜 Starting farm manager {self.manager_id}...")
+        print(f"🚜 Starting farm manager {self.supervisor_id}...")
         self.connection = await aio_pika.connect_robust(RABBITMQ_URL)
-        self.channel = await self.connection.channel()
-
-        # Passive declare to get message count
-        self.jobs_queue = await self.channel.declare_queue(JOBS_QUEUE, durable=True)
-
-        # Control exchange + queues
-        self.control_exchange = await self.channel.declare_exchange(CONTROL_EXCHANGE, ExchangeType.DIRECT, durable=True)
-        self.supervisor_queue = await self.channel.declare_queue(
-            f"async_farm.control.supervisor.{self.manager_id}", exclusive=True, auto_delete=True
-        )
-        await self.supervisor_queue.bind(self.control_exchange, routing_key=f"supervisor.{self.manager_id}")
+        
+        await self.setup_connections()
 
         # Signals
         loop = asyncio.get_running_loop()
         try:
-            loop.add_signal_handler(signal.SIGTERM, lambda: asyncio.create_task(self.shutdown()))
-            loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(self.shutdown()))
+            loop.add_signal_handler(signal.SIGTERM, self.request_shutdown)
+            loop.add_signal_handler(signal.SIGINT, self.request_shutdown)
         except NotImplementedError:
             # Signals may be unavailable (e.g., on Windows or non-main thread)
             pass
@@ -95,37 +91,148 @@ class AsyncFarmSupervisor:
             print(f"📊 Starting scaling loop every {self.scale_check_interval} seconds...")
             # Start consumers
             await asyncio.gather(
-                self.heartbeat_consumer(),
+                self.heartbeat_loop(),
                 self.scaling_loop(),
-                self.supervisor_heartbeat_loop(),
+                self.keep_alive_loop(),
+                self.monitor_workers_heartbeat_loop()
             )
         finally:
-            await self.shutdown()
+            self.request_shutdown()
 
-    async def shutdown(self) -> None:
+            if self.channel:
+                await self.channel.close()
+
+            if self.connection:
+                await self.connection.close()
+
+    async def setup_connections(self) -> None:
+        self.channel = await self.connection.channel()
+
+        self.jobs_queue = await self.channel.declare_queue(JOBS_QUEUE, durable=True)
+
+        self.supervisor_to_workers_exchange = await self.channel.declare_exchange(SUPERVISOR_TO_WORKERS_EXCHANGE, ExchangeType.FANOUT, durable=True)
+
+        self.worker_to_supervisor_exchange = await self.channel.declare_exchange(WORKER_TO_SUPERVISOR_EXCHANGE, ExchangeType.DIRECT, durable=True, auto_delete=True)
+        self.supervisor_queue = await self.channel.declare_queue(f"async_farm.control.supervisor.{self.supervisor_id}", exclusive=True, auto_delete=True)
+        await self.supervisor_queue.bind(self.supervisor_to_workers_exchange, routing_key=f"supervisor.{self.supervisor_id}")
+        await self.supervisor_queue.consume(self.on_control_message, no_ack=True)
+ 
+    def request_shutdown(self) -> None:
         if self.shutdown_requested:
             return
 
         print("🛑 Farm shutdown requested...")
         self.shutdown_requested = True
 
+    async def handle_workers_heartbeat(self, payload: dict) -> None:
+        if worker_id := payload.get("worker_id"):
+            if self.workers.get(worker_id):
+                self.workers.get(worker_id)["last_heartbeat_timestamp"] = payload.get("timestamp") or time.time()
+                self.workers.get(worker_id)["active_tasks"] = payload.get("active_tasks")
+            
+            else:
+                pid_val = int(payload.get("pid", 0))
+                for p in list(self.pending_processes):
+                    if p.pid == pid_val:
+
+                        try:
+                            self.pending_processes.remove(p)
+                        except ValueError:
+                            print("Err removing process")
+                            pass
+
+                        self.workers[worker_id] = {
+                            "process": p,
+                            "active_tasks": payload.get("active_tasks", 0),
+                            "last_heartbeat_timestamp": payload.get("timestamp") or time.time(),
+                            "start_timestamp": payload.get("start_timestamp")
+                        } 
+                        break
+    
+    # ---------------- consumers ----------------
+    async def on_control_message(self, message: aio_pika.IncomingMessage) -> None:
+        payload = decode_message(message.body)
+        if not payload:
+            return
+
+        print(f"[MANAGER] received message `{payload}`")
+        
+        if payload.get("type") == "heartbeat":
+            print("[MANAGER] received heartbeat control message")
+            await self.handle_workers_heartbeat(payload)
+
+    # ---------------- publishers ----------------
+    async def publish_shutdown(self, grace_s: int = 0) -> None:
+        payload = json.dumps({
+            "type": "shutdown",
+            "grace_s": grace_s
+            }).encode("utf-8")
+
+        try:
+            await self.supervisor_to_workers_exchange.publish(
+                aio_pika.Message(body=payload), routing_key=""
+            )
+        except Exception:
+            print("cannot publish shutdown")
+            # Best-effort control message; avoid crashing supervisor on transient broker errors
+            pass
+
+    async def publish_heartbeat(self) -> None:
+        payload = json.dumps({
+            "type": "heartbeat",
+            "supervisor_id": self.supervisor_id,
+            "timestamp": time.time(),
+        }).encode("utf-8")
+
+        try:
+            await self.supervisor_to_workers_exchange.publish(
+                aio_pika.Message(body=payload), routing_key=""
+            )
+        except Exception:
+            print("cannot publish heartbeat")
+            # Best-effort supervisor heartbeat; avoid crashing supervisor on transient broker errors
+            pass
+
+    # ---------------- processes ----------------
+    async def spawn_worker(self) -> Process:
+        worker_num = len(self.workers) + len(self.pending_processes)
+        p = Process(target=_worker_entry, args=(self.supervisor_id,), name=f"AsyncFarmWorker-{worker_num}")
+        p.start()
+        print(f"🧑‍🌾 Spawned worker #{worker_num} (PID: {p.pid})")
+        self.pending_processes.append(p)
+        return p
+
+    def get_alive_processes(self) -> List[Process]:
+        # Refresh pending processes
+        pending_alive: List[Process] = []
+        for p in self.pending_processes:
+            if p.is_alive():
+                pending_alive.append(p)
+        self.pending_processes = pending_alive
+
+        # Refresh associated workers
+        alive_associated: List[Process] = []
+        for wid, st in list(self.workers.items()):
+            proc = st.get("process")
+            if proc is None or not proc.is_alive():
+                self.workers.pop(wid, None)
+            else:
+                alive_associated.append(proc)
+
+        return [*self.pending_processes, *alive_associated]
+
+    # ---------------- loops ----------------
+    async def keep_alive_loop(self) -> None:
+        while self.shutdown_requested == False:
+            await asyncio.sleep(0.5)
+
         # Ask workers to shutdown gracefully
+        print("Processing shutdown")
         worker_count = len(list(self.workers.keys()))
         if worker_count > 0:
             print(f"🧑‍🌾 Asking {worker_count} workers to shutdown gracefully...")
-            for wid in list(self.workers.keys()):
-                await self.send_shutdown(wid, self.shutdown_grace_s)
-
-        # Close connections after all workers are terminated
-        # print("🔌 Closing farm connections...")
-        # await self.close_connections()
-        # Line 117: Supervisor sends shutdown messages to workers via RabbitMQ
-        # Line 121: Supervisor immediately closes its RabbitMQ connections ❌
-        # Line 127: Supervisor waits for workers to finish, but they're stuck because:
-        # Workers can't send final heartbeats (connection closed)
-        # Workers' supervisor_watchdog_loop gets stuck waiting for supervisor heartbeats
-        # Workers' drain_loop can't close connections properly
-
+            await self.publish_shutdown(self.shutdown_grace_s)
+                
         # Wait grace shutdown
         procs = self.get_alive_processes()
         if procs:
@@ -150,132 +257,6 @@ class AsyncFarmSupervisor:
 
         # Close connections after all workers are terminated
         print("🔌 Closing farm connections...")
-        await self.close_connections()
-
-    async def close_connections(self) -> None:
-        try:
-            if self.channel:
-                await self.channel.close()
-        finally:
-            if self.connection:
-                await self.connection.close()
-
-    async def _redeclare_supervisor_queue(self) -> None:
-        """Redeclare the supervisor queue after it was auto-deleted."""
-        if self.channel is None or self.control_exchange is None:
-            return
-        try:
-            self.supervisor_queue = await self.channel.declare_queue(
-                f"async_farm.control.supervisor.{self.manager_id}", exclusive=True, auto_delete=True
-            )
-            await self.supervisor_queue.bind(self.control_exchange, routing_key=f"supervisor.{self.manager_id}")
-        except Exception:
-            print("Redeclare supervisor queue failed")
-            # Best-effort redeclaration; if it fails, the next iteration will try again
-            pass
-
-    # ---------------- processes ----------------
-    async def spawn_worker(self) -> Process:
-        worker_num = len(self.workers) + len(self.pending_processes)
-        p = Process(target=_worker_entry, args=(self.manager_id,), name=f"AsyncFarmWorker-{worker_num}")
-        p.start()
-        print(f"🧑‍🌾 Spawned worker #{worker_num} (PID: {p.pid})")
-        self.pending_processes.append(p)
-        return p
-
-    async def send_shutdown(self, worker_id: str, grace_s: int) -> None:
-        assert self.control_exchange is not None
-        payload = json.dumps({"type": "shutdown", "grace_s": grace_s}).encode("utf-8")
-        try:
-            await self.control_exchange.publish(
-                aio_pika.Message(body=payload), routing_key=f"worker.{worker_id}"
-            )
-        except Exception:
-            # Best-effort control message; avoid crashing supervisor on transient broker errors
-            pass
-
-    def get_alive_processes(self) -> List[Process]:
-        # Refresh pending processes
-        pending_alive: List[Process] = []
-        for p in self.pending_processes:
-            if p.is_alive():
-                pending_alive.append(p)
-        self.pending_processes = pending_alive
-
-        # Refresh associated workers
-        alive_associated: List[Process] = []
-        for wid, st in list(self.workers.items()):
-            proc = st.get("process")
-            if proc is None or not proc.is_alive():
-                self.workers.pop(wid, None)
-            else:
-                alive_associated.append(proc)
-
-        return [*self.pending_processes, *alive_associated]
-
-    # ---------------- monitoring ----------------
-    async def heartbeat_consumer(self) -> None:
-        assert self.supervisor_queue is not None
-        while not self.shutdown_requested:
-            try:
-                async with self.supervisor_queue.iterator() as it:
-                    while not self.shutdown_requested:
-                        try:
-                            message = await asyncio.wait_for(it.__anext__(), timeout=1.0)
-                        except asyncio.TimeoutError:
-                            continue
-                        except StopAsyncIteration:
-                            # Iterator closed by broker/connection; recreate on next loop
-                            break
-                        try:
-                            payload = json.loads(message.body.decode("utf-8"))
-                            msg_type = payload.get("type")
-
-                            if msg_type == "heartbeat":
-                                wid = payload.get("worker_id")
-                                pid_val = int(payload.get("pid", 0))
-                                # Associate pending process by PID if needed
-                                proc: Optional[Process] = self.workers.get(wid, {}).get("process") if wid in self.workers else None
-                                if proc is None:
-                                    for p in list(self.pending_processes):
-                                        if p.pid == pid_val:
-                                            proc = p
-                                            try:
-                                                self.pending_processes.remove(p)
-                                            except ValueError:
-                                                pass
-                                            break
-                                # If no local process, ignore (we don't adopt remote workers)
-                                if proc is not None:
-                                    state: WorkerState = {
-                                        "process": proc,
-                                        "active_tasks": int(payload.get("active_tasks", 0)),
-                                        "ts": float(payload.get("ts", time.time())),
-                                    }
-                                    self.workers[wid] = state
-
-                            elif msg_type == "stuck_task":
-                                # shutdown will be initiated by worker
-                                pass
-                        finally:
-                            try:
-                                await message.ack()
-                            except Exception:
-                                # Best-effort ack on transient channel issues
-                                pass
-            except StopAsyncIteration:
-                print("💓 Heartbeat stream ended; reconnecting...")
-                # Redeclare the queue since it was auto-deleted when iterator closed
-                await self._redeclare_supervisor_queue()
-                await asyncio.sleep(0.5)
-                continue
-            except Exception as e:
-                # Transient error (connection hiccup etc.) — retry
-                print(e)
-                print("💓 Heartbeat consumer error; retrying shortly...", e)
-                # Redeclare the queue in case it was deleted
-                await self._redeclare_supervisor_queue()
-                await asyncio.sleep(1.0)
 
     async def scaling_loop(self) -> None:
         assert self.jobs_queue is not None
@@ -311,28 +292,20 @@ class AsyncFarmSupervisor:
                 if remove_count > 0:
                     print(f"📉 Queue is light ({message_count} jobs), scaling down {remove_count} idle workers...")
                 for wid in idle_now[:remove_count]:
-                    await self.send_shutdown(wid, self.shutdown_grace_s)
+                    await self.publish_shutdown(wid, self.shutdown_grace_s)
 
             await asyncio.sleep(self.scale_check_interval)
 
-
-    async def supervisor_heartbeat_loop(self) -> None:
-        assert self.control_exchange is not None
-        routing_key = f"supervisor_heartbeat.{self.manager_id}"
+    async def heartbeat_loop(self) -> None:
         while not self.shutdown_requested:
-            try:
-                payload = json.dumps({
-                    "type": "supervisor_heartbeat",
-                    "manager_id": self.manager_id,
-                    "ts": time.time(),
-                }).encode("utf-8")
-                await self.control_exchange.publish(
-                    aio_pika.Message(body=payload), routing_key=routing_key
-                )
-            except Exception:
-                # Best-effort supervisor heartbeat; avoid crashing supervisor on transient broker errors
-                pass
+            await self.publish_heartbeat()
             await asyncio.sleep(HEARTBEAT_INTERVAL_S)
+
+    async def monitor_workers_heartbeat_loop(self) -> None:
+        while not self.request_shutdown:
+            for worker_id, state in self.workers.values():
+                pass
+                # TODO: implement this
 
 def run_supervisor() -> None:
     sup = AsyncFarmSupervisor()

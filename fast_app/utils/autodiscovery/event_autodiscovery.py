@@ -15,7 +15,11 @@ def autodiscover_events() -> Optional[Dict[Type['Event'], List[Type['EventListen
         Dictionary of events to listeners mapping, or None if not found
     """
     # First check if the module exists at all to avoid misreporting on inner import errors
-    spec = importlib.util.find_spec("app.event_provider")
+    try:
+        spec = importlib.util.find_spec("app.event_provider")
+    except ModuleNotFoundError:
+        spec = None
+        
     if spec is None:
         print("📁 No app/event_provider.py found, skipping event autodiscovery")
         return None

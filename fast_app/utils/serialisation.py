@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from typing import Any
 
 from bson import ObjectId
 
@@ -85,3 +86,15 @@ def remove_suffix(text: str, suffix: str) -> str:
     if text.endswith(suffix):
         return text[: -len(suffix)]
     return text
+
+
+def safe_int(value: Any, default: int, minimum: int, maximum: int) -> int:
+    try:
+        iv = int(value)
+    except Exception:
+        return default
+    if iv < minimum:
+        return minimum
+    if iv > maximum:
+        return maximum
+    return iv
