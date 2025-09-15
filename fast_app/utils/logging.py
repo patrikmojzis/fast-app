@@ -35,7 +35,7 @@ def setup_logging(log_file_name: str | None = None):
     
     # Configure root logger
     root_logger = logging.getLogger()
-    root_logger.setLevel(os.getenv('LOG_LEVEL', 'INFO').upper())
+    root_logger.setLevel(os.getenv('LOG_LEVEL', 'DEBUG').upper())
     
     # Clear any existing handlers to avoid duplicates
     root_logger.handlers.clear()

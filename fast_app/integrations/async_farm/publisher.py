@@ -65,8 +65,8 @@ def enqueue_callable(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Non
         kwargs_compressed = True
 
     # Capture context snapshot (picklable only) and app boot args for worker
-    app = Application()
-    boot_args = app.get_boot_args() if app.is_booted() else {}
+    # app = Application()
+    # boot_args = app.get_boot_args() if app.is_booted() else {}
     ctx_snapshot = context.snapshot(picklable_only=True, include_defaults=True)
 
     payload: dict[str, Any] = {
@@ -78,7 +78,7 @@ def enqueue_callable(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Non
         "kwargs_compressed": kwargs_compressed,
         # Context + boot data
         "ctx_snapshot": ctx_snapshot,
-        "boot_args": boot_args,
+        # "boot_args": boot_args,
     }
 
     est_size = len(pickle.dumps(payload, protocol=pickle.HIGHEST_PROTOCOL))

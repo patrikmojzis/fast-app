@@ -30,7 +30,7 @@ async def authenticate(sio: AsyncServer | AsyncNamespace, sid: str, environ: dic
     if not user:
         raise ConnectionRefusedError("Invalid access token")
     
-    await asyncio.gather(
+    user, auth = await asyncio.gather(
         user.update({'last_seen_at': datetime.now()}),
         auth.update({'last_used_at': datetime.now()}),
     )

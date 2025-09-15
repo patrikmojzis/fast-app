@@ -11,6 +11,7 @@ from .resource_response_middleware import ResourceResponseMiddleware
 from .model_binding_middleware import ModelBindingMiddleware
 from .schema_validation_middleware import SchemaValidationMiddleware
 from .throttle_middleware import ThrottleMiddleware
+from .authorize_middleware import AuthorizeMiddleware
 
 __all__ = [
     "EtagMiddleware",
@@ -20,4 +21,5 @@ __all__ = [
     "ModelBindingMiddleware",
     "SchemaValidationMiddleware",
     "ThrottleMiddleware",
+    "AuthorizeMiddleware",
 ]

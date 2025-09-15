@@ -1,23 +1,26 @@
 # app/models/model.py
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, TypeVar, ClassVar, Any, get_type_hints
+from typing import Optional, TypeVar, ClassVar, Any, get_type_hints, get_origin, Self
 from typing import TYPE_CHECKING
 
 from bson import ObjectId
 
 from fast_app.contracts.policy import Policy
 from fast_app.database.mongo import get_db
-from fast_app.decorators.db_cache_decorator import cached
+from fast_app.decorators.db_cache_decorator import cached_db_retrieval
 from fast_app.exceptions.common_exceptions import DatabaseNotInitializedException
 from fast_app.exceptions.model_exceptions import ModelNotFoundException
 from fast_app.utils.model_utils import build_search_query_from_string
 from fast_app.utils.query_builder import QueryBuilder
 from fast_app.utils.serialisation import serialise
+from fast_app.utils.versioned_cache import bump_collection_version
 
 if TYPE_CHECKING:
-    from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorCommandCursor
+    from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorCommandCursor, AsyncIOMotorCursor
     from fast_app import Observer
+    from fast_app.contracts.policy import Policy
+
 
 T = TypeVar('T', bound='Model')
 
@@ -26,7 +29,11 @@ T = TypeVar('T', bound='Model')
 class Model():
     protected: ClassVar[list[str]] = ["_id", "created_at", "updated_at"]
 
-    policy: ClassVar['Policy'] = None
+    policy: ClassVar[Optional['Policy']] = None
+    _cached_model_fields: ClassVar[Optional[dict[str, Any]]] = None
+    _cached_fillable_fields: ClassVar[Optional[list[str]]] = None
+    _cached_all_fields: ClassVar[Optional[list[str]]] = None
+
     search_relations: ClassVar[list[dict[str, str]]] = []  # Example: [{"field": "user_id", "model": "User", "search_fields": ["name"]}]
 
     _id: Optional[ObjectId] = None
@@ -50,87 +57,147 @@ class Model():
         return str(self.dict())
 
     @classmethod
+    def collection_name(cls) -> str:
+        return cls.__name__.lower()
+
+    @classmethod
     async def collection_cls(cls) -> 'AsyncIOMotorCollection':
         db = await get_db()
         if db is None:
             raise DatabaseNotInitializedException()
-        return db[cls.__name__.lower()]
+        return db[cls.collection_name()]
 
     async def collection(self) -> 'AsyncIOMotorCollection':
         db = await get_db()
         if db is None:
             raise DatabaseNotInitializedException()
-        return db[self.__class__.__name__.lower()]
+        return db[self.collection_name()]
 
-    async def save(self: T) -> T:
+    @classmethod
+    @cached_db_retrieval()
+    async def exec_find(cls, *args, **kwargs) -> 'AsyncIOMotorCursor':
+        return await (await cls.collection_cls()).find(*args, **kwargs)
+
+    @classmethod
+    @cached_db_retrieval()
+    async def exec_find_one(cls, *args, **kwargs) -> Optional[dict[str, any]]:
+        return await (await cls.collection_cls()).find_one(*args, **kwargs)
+
+    @classmethod
+    @cached_db_retrieval()
+    async def exec_count(cls, *args, **kwargs) -> int:
+        return await (await cls.collection_cls()).count_documents(*args, **kwargs)
+
+    async def save(self) -> Self:
         if self._id:
             await self._update()
         else:
             await self._create()
-        await self.refresh()
         return self
 
     @classmethod
     def model_fields(cls) -> dict[str, Any]:
-        annotations = {}
+        if cls._cached_model_fields is not None:
+            return cls._cached_model_fields
+
+        annotations: dict[str, Any] = {}
         for base in cls.__mro__:
             if hasattr(base, '__annotations__'):
-                annotations.update(get_type_hints(base))
+                base_hints = get_type_hints(base)
+                for name, hint in base_hints.items():
+                    # Skip ClassVar annotations and internal control fields
+                    if get_origin(hint) is ClassVar:
+                        continue
 
-        del annotations["protected"]
-        del annotations["policy"]
-        del annotations["search_relations"]
+                    if name in ("protected", "policy", "search_relations"):  # May be redundant
+                        continue
+                    annotations[name] = hint
 
+        cls._cached_model_fields = annotations
         return annotations
 
     @classmethod
     def fillable_fields(cls) -> list[str]:
-        return [f for f in cls.model_fields().keys() if f not in cls.protected]
+        if cls._cached_fillable_fields is not None:
+            return cls._cached_fillable_fields
+        cls._cached_fillable_fields = [f for f in cls.model_fields().keys() if f not in cls.protected]
+        return cls._cached_fillable_fields
 
     @classmethod
     def all_fields(cls) -> list[str]:
-        return [key for key in cls.model_fields().keys()]
+        if cls._cached_all_fields is not None:
+            return cls._cached_all_fields
+        cls._cached_all_fields = [key for key in cls.model_fields().keys()]
+        return cls._cached_all_fields
 
-    async def _update(self):
-        [await observer.on_updating(self) for observer in self.observers]
-        await (await self.collection()).update_one(
-            self.query_modifier({'_id': self._id}),
-            {
-                '$set': {key: self.get(key) for key in self.fillable_fields()},
-                '$currentDate': {'updated_at': True}
-            }
+    async def _notify_observer(self, hook: str) -> None:
+        for observer in self.observers:
+            await getattr(observer, hook)(self)
+
+    @staticmethod
+    def _build_update_payload(
+        set_values: Optional[dict[str, Any]] = None,
+        extra_ops: Optional[dict[str, Any]] = None,
+        touch_timestamp: bool = True,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {}
+        if extra_ops:
+            payload.update({k: v for k, v in extra_ops.items() if k != "$set"})
+        if set_values:
+            if "$set" in payload and isinstance(payload["$set"], dict):
+                payload["$set"].update(set_values)
+            else:
+                payload["$set"] = dict(set_values)
+        if touch_timestamp:
+            payload.setdefault("$currentDate", {})
+            if isinstance(payload["$currentDate"], dict):
+                payload["$currentDate"]["updated_at"] = True
+            else:
+                payload["$currentDate"] = {"updated_at": True}
+        return payload
+
+    async def _update(self) -> None:
+        await self._notify_observer('on_updating')
+        coll = await self.collection()
+        query = await self.query_modifier({'_id': self._id}, "update", self.collection_name())
+        update_payload = self._build_update_payload(
+            set_values={key: self.get(key) for key in self.fillable_fields()},
+            extra_ops=None,
+            touch_timestamp=True,
         )
+        await coll.update_one(query, update_payload)
         await self.refresh()
-        [await observer.on_updated(self) for observer in self.observers]
+        bump_collection_version(self.collection_name())
+        await self._notify_observer('on_updated')
 
-    async def _create(self):
-        [await observer.on_creating(self) for observer in self.observers]
-        data = self.query_modifier({
+    async def _create(self) -> None:
+        await self._notify_observer('on_creating')
+        to_insert = {
             **{key: self.get(key) for key in self.fillable_fields()},
             'created_at': self.get('created_at') or datetime.now(),
             'updated_at': self.get('updated_at') or datetime.now(),
-        })
-        result = await (await self.collection()).insert_one(data)
+        }
+        data = await self.query_modifier(to_insert, "create", self.collection_name())
+        coll = await self.collection()
+        result = await coll.insert_one(data)
         self._id = result.inserted_id
         await self.refresh()
-        [await observer.on_created(self) for observer in self.observers]
+        bump_collection_version(self.collection_name())
+        await self._notify_observer('on_created')
 
     @classmethod
     async def create(cls: type[T], data: dict[str, any]) -> T:
-        instance = cls(**cls.query_modifier(data))
+        instance = cls(**data)
         await instance.save()
         return instance
 
     @classmethod
-    @cached()
     async def all(cls: type[T]) -> list[T]:
-        query = cls.query_modifier({})  
-        if cls.policy:  # Apply policy 
-            query = await cls.policy.find(query)
-        return [cls(**data) async for data in (await cls.collection_cls()).find(query)]
+        return await cls.find({})
 
-    async def refresh(self: T) -> T:
-        data = await (await self.collection()).find_one({'_id': self._id})
+    async def refresh(self) -> Self:
+        coll = await self.collection()
+        data = await coll.find_one({'_id': self._id})
         if data:
             for key, value in data.items():
                 setattr(self, key, value)
@@ -149,15 +216,13 @@ class Model():
         elif isinstance(query, ObjectId):
             query = {"$or": [{key: query} for key in cls.all_fields()]}
             
-        current_collection = cls.__name__.lower()
+        current_collection = cls.collection_name()
         
         # Start with direct matches in the current collection
         pipeline = []
         
         # Query for current collection
-        base_query = cls.query_modifier() 
-        if cls.policy:
-            base_query = await cls.policy.find(base_query)  # apply policy
+        base_query = await cls.query_modifier({}, "search", current_collection) 
         
         # Find direct matches first
         direct_match = {
@@ -186,7 +251,7 @@ class Model():
                             # Find documents in the related collection matching the search query
                             {"$match": {
                                 "$and": [
-                                    cls.query_modifier(),
+                                    await cls.query_modifier({}, "search", related_model_name),
                                     build_search_query_from_string(query, search_fields)
                                 ]
                             }},
@@ -269,26 +334,23 @@ class Model():
     @classmethod
     async def find_by_id(cls: type[T], _id: str | ObjectId) -> Optional[T]:
         object_id = ObjectId(_id) if isinstance(_id, str) else _id
-        return await cls.find_one(cls.query_modifier({'_id': object_id}))
+        return await cls.find_one({'_id': object_id})
 
     @classmethod
-    @cached()
     async def find(cls: type[T], query: dict[str, any], **kwargs) -> list[T]:
-        if cls.policy:  # Apply policy 
-            query = await cls.policy.find(query)
-        return [cls(**data) async for data in (await cls.collection_cls()).find(cls.query_modifier(query), **kwargs)]
+        final_query = await cls.query_modifier(query, "find", cls.collection_name())
+        cursor = await cls.exec_find(final_query, **kwargs)
+        return [cls(**data) async for data in cursor]
 
     @classmethod
-    @cached()
     async def find_one(cls: type[T], query: dict[str, any], **kwargs) -> Optional[T]:
-        if cls.policy:  # Apply policy 
-            query = await cls.policy.find(query)
-        data = await (await cls.collection_cls()).find_one(cls.query_modifier(query), **kwargs)
+        final_query = await cls.query_modifier(query, "find_one", cls.collection_name())
+        data = await cls.exec_find_one(final_query, **kwargs)
         return cls(**data) if data else None
 
     @classmethod
     async def find_or_fail(cls: type[T], query: dict[str, any], **kwargs) -> T:
-        instance = await cls.find_one(cls.query_modifier(query), **kwargs)
+        instance = await cls.find_one(query, **kwargs)
         if not instance:
             raise ModelNotFoundException(cls.__name__)
         return instance
@@ -296,77 +358,77 @@ class Model():
     @classmethod
     async def find_by_id_or_fail(cls: type[T], _id: str | ObjectId) -> T:
         object_id = ObjectId(_id) if isinstance(_id, str) else _id
-        return await cls.find_or_fail(cls.query_modifier({'_id': object_id}))
+        return await cls.find_or_fail({'_id': object_id})
 
     @classmethod
-    @cached()
     async def exists(cls, query: dict[str, any]) -> bool:
-        if cls.policy:  # Apply policy 
-            query = await cls.policy.find(query)
-        return await (await cls.collection_cls()).count_documents(cls.query_modifier(query)) > 0
+        final_query = await cls.query_modifier(query, "count", cls.collection_name())
+        return await cls.exec_count(final_query) > 0
 
     @classmethod
     async def first(cls: type[T], **kwargs) -> Optional[T]:
-        return await cls.find_one(cls.query_modifier({}), **kwargs)
+        return await cls.find_one({}, **kwargs)
 
     @classmethod
     async def delete_many(cls, query: dict[str, any], **kwargs) -> None:
-        await (await cls.collection_cls()).delete_many(cls.query_modifier(query), **kwargs)
+        coll = await cls.collection_cls()
+        final_query = await cls.query_modifier(query, "delete_many", cls.collection_name())
+        await coll.delete_many(final_query, **kwargs)
+        bump_collection_version(cls.collection_name())
 
     async def delete(self) -> None:
-        [await observer.on_deleting(self) for observer in self.observers]
-        await (await self.collection()).delete_one(self.query_modifier({'_id': self._id}))
-        [await observer.on_deleted(self) for observer in self.observers]
+        await self._notify_observer('on_deleting')
+        coll = await self.collection()
+        query = await self.query_modifier({'_id': self._id}, "delete", self.collection_name())
+        await coll.delete_one(query)
+        bump_collection_version(self.collection_name())
+        await self._notify_observer('on_deleted')
 
     @classmethod
     async def update_many(cls, query: dict[str, any], data: dict[str, any], **kwargs) -> None:
-        # Initialize the update data with the updated_at field
-        update_data = {"$set": {"updated_at": datetime.now()}}
+        coll = await cls.collection_cls()
+        final_query = await cls.query_modifier(query, "update_many", cls.collection_name())
+        update_data = cls._build_update_payload(set_values=data.get("$set"), extra_ops={k: v for k, v in data.items() if k != "$set"}, touch_timestamp=True)
+        await coll.update_many(final_query, update_data, **kwargs)
+        bump_collection_version(cls.collection_name())
 
-        # Merge the provided data into the update_data
-        for key, value in data.items():
-            if key == "$set":
-                # If the key is "$set", merge its contents with the existing "$set" in update_data
-                if "$set" in update_data:
-                    update_data["$set"].update(value)
-                else:
-                    update_data["$set"] = value
-            else:
-                # For other operations like "$unset", simply add/merge them
-                update_data[key] = value
-
-        await (await cls.collection_cls()).update_many(cls.query_modifier(query), update_data, **kwargs)
-
-    async def update(self: T, data: dict[str, any]) -> T:
+    async def update(self, data: dict[str, any]) -> Self:
         for key, value in data.items():
             self.clean[key] = self.get(key)
             setattr(self, key, value)
         await self.save()
         return self
 
-    @classmethod
-    @cached()
-    async def count(cls, query: dict[str, any] = None, **kwargs) -> int:
-        if cls.policy:  # Apply policy 
-            query = await cls.policy.find(query)
-        return await (await cls.collection_cls()).count_documents(cls.query_modifier(query), **kwargs)
+    async def touch(self) -> Self:
+        coll = await self.collection()
+        query = await self.query_modifier({'_id': self._id}, "touch", self.collection_name())
+        await coll.update_one(query, {"$currentDate": {"updated_at": True}})
+        await self.refresh()
+        bump_collection_version(self.collection_name())
+        return self
 
     @classmethod
-    @cached()
+    async def count(cls, query: dict[str, any] = None, **kwargs) -> int:
+        final_query = await cls.query_modifier(query, "count", cls.collection_name())
+        return await cls.exec_count(final_query, **kwargs)
+
+    @classmethod
     async def aggregate(cls, pipeline: list[dict[str, any]], **kwargs) -> list[dict[str, any]]:
         cursor: AsyncIOMotorCommandCursor = (await cls.collection_cls()).aggregate(pipeline, **kwargs)
         return await cursor.to_list(length=None)
 
     @classmethod
     async def insert_many(cls, data: list[dict[str, any]]) -> None:
+        base_meta = await cls.query_modifier({'created_at': datetime.now(), 'updated_at': datetime.now()}, "insert_many", cls.collection_name())
         for d in data:
-            d.update(cls.query_modifier({'created_at': datetime.now(), 'updated_at': datetime.now()}))
+            d.update(base_meta)
 
         await (await cls.collection_cls()).insert_many(data)
+        bump_collection_version(cls.collection_name())
 
     @classmethod
     async def update_or_create(cls: type[T], query: dict[str, any], data: dict[str, any]) -> T:
-        instance = await cls.find_one(cls.query_modifier(query))
+        instance = await cls.find_one(query)
         if instance:
             await instance.update(data)
         else:
@@ -403,7 +465,7 @@ class Model():
         return data
 
     @classmethod
-    def query_modifier(cls, query: dict = None) -> dict:
+    async def query_modifier(cls, query: dict = None, function_name: str = None, model_name: str = None) -> dict:
         return query
     
     @classmethod

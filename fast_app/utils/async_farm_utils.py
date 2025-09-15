@@ -7,9 +7,18 @@ import logging
 from aio_pika import IncomingMessage
 from dataclasses import dataclass
 
-@dataclass
 class AckGuard:
-    acked: bool = False
+    def __init__(self, message: IncomingMessage):
+        self.message = message
+        self.acked: bool = False
+
+    async def ack(self) -> None:
+        if self.acked:
+            return
+
+        await self.message.ack()
+        self.acked = True
+
 
 async def await_processes_death(processes: list[Process], grace_s: int = 2) -> None:
     deadline = time.monotonic() + grace_s
@@ -22,12 +31,3 @@ def decode_message(body: bytes) -> Optional[dict]:
     except json.JSONDecodeError:
         logging.warning("[decode_message] Invalid message body", body.decode("utf-8"))
         return None
-
-async def ack_once(message: IncomingMessage, guard: AckGuard) -> None:
-    if guard.acked:
-        return
-    try:
-        await message.ack()
-        guard.acked = True
-    except Exception:
-        pass

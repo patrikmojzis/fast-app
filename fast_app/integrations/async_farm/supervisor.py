@@ -8,11 +8,13 @@ import signal
 import time
 from multiprocessing import Process
 from typing import Dict, List, Optional, TypedDict
+import sys
 
 import aio_pika
 from aio_pika import ExchangeType
 
 from fast_app.utils.async_farm_utils import await_processes_death, decode_message
+from fast_app.app_provider import boot
 
 
 class WorkerState(TypedDict):
@@ -39,6 +41,7 @@ def _worker_entry(supervisor_id: str) -> None:
     worker = AsyncFarmWorker(supervisor_id=supervisor_id)
     _asyncio.run(worker.start())
 
+Worker = Dict[str, WorkerState]
 
 class AsyncFarmSupervisor:
     def __init__(self) -> None:
@@ -52,8 +55,8 @@ class AsyncFarmSupervisor:
         self.shutdown_grace_s = int(os.getenv("WORKER_SHUTDOWN_GRACE_S", "15"))
 
         # State
-        self.supervisor_id = f"manager_{os.getpid()}_{int(time.time())}"
-        self.workers: Dict[str, WorkerState] = {}  # associated workers
+        self.supervisor_id = f"supervisor_{os.getpid()}_{int(time.time())}"
+        self.workers: Worker = {}  # associated workers
         self.pending_processes: List[Process] = []  # just spawned workers
         self.shutdown_requested = False
 
@@ -66,8 +69,9 @@ class AsyncFarmSupervisor:
         self.supervisor_queue: Optional[aio_pika.RobustQueue] = None
 
     # ---------------- lifecycle ----------------
-    async def start(self) -> None:
-        print(f"🚜 Starting farm manager {self.supervisor_id}...")
+    async def run(self) -> None:
+        boot()
+        print(f"🚜 Starting farm supervisor {self.supervisor_id}...")
         self.connection = await aio_pika.connect_robust(RABBITMQ_URL)
         
         await self.setup_connections()
@@ -114,18 +118,20 @@ class AsyncFarmSupervisor:
 
         self.worker_to_supervisor_exchange = await self.channel.declare_exchange(WORKER_TO_SUPERVISOR_EXCHANGE, ExchangeType.DIRECT, durable=True, auto_delete=True)
         self.supervisor_queue = await self.channel.declare_queue(f"async_farm.control.supervisor.{self.supervisor_id}", exclusive=True, auto_delete=True)
-        await self.supervisor_queue.bind(self.supervisor_to_workers_exchange, routing_key=f"supervisor.{self.supervisor_id}")
+        await self.supervisor_queue.bind(self.worker_to_supervisor_exchange, routing_key=f"supervisor.{self.supervisor_id}")
         await self.supervisor_queue.consume(self.on_control_message, no_ack=True)
  
     def request_shutdown(self) -> None:
         if self.shutdown_requested:
             return
 
-        print("🛑 Farm shutdown requested...")
+        print("🛑 Farm supervisor shutdown requested...")
         self.shutdown_requested = True
 
     async def handle_workers_heartbeat(self, payload: dict) -> None:
         if worker_id := payload.get("worker_id"):
+            # print(f"❤️ Worker {worker_id} heartbeat received", end="\r", flush=True)
+
             if self.workers.get(worker_id):
                 self.workers.get(worker_id)["last_heartbeat_timestamp"] = payload.get("timestamp") or time.time()
                 self.workers.get(worker_id)["active_tasks"] = payload.get("active_tasks")
@@ -155,49 +161,54 @@ class AsyncFarmSupervisor:
         if not payload:
             return
 
-        print(f"[MANAGER] received message `{payload}`")
+        # print(f"[SUPERVISOR] received message `{payload}`")
         
         if payload.get("type") == "heartbeat":
-            print("[MANAGER] received heartbeat control message")
+            # print("[SUPERVISOR] received heartbeat control message")
             await self.handle_workers_heartbeat(payload)
 
     # ---------------- publishers ----------------
-    async def publish_shutdown(self, grace_s: int = 0) -> None:
-        payload = json.dumps({
-            "type": "shutdown",
-            "grace_s": grace_s
-            }).encode("utf-8")
-
+    async def publish_to_workers(self, payload: dict) -> None:
+        payload = json.dumps(payload).encode("utf-8")
         try:
             await self.supervisor_to_workers_exchange.publish(
-                aio_pika.Message(body=payload), routing_key=""
-            )
-        except Exception:
-            print("cannot publish shutdown")
+                aio_pika.Message(body=payload), 
+                routing_key=""
+                )
+        except Exception as e:
+            print("[SUPERVISOR] Cannot publish to workers", e)
             # Best-effort control message; avoid crashing supervisor on transient broker errors
             pass
 
+    async def publish_shutdown(self, grace_s: int = 0) -> None:
+        await self.publish_to_workers({
+            "type": "shutdown",
+            "grace_s": grace_s
+            })
+
     async def publish_heartbeat(self) -> None:
-        payload = json.dumps({
+        await self.publish_to_workers({
             "type": "heartbeat",
             "supervisor_id": self.supervisor_id,
             "timestamp": time.time(),
-        }).encode("utf-8")
-
-        try:
-            await self.supervisor_to_workers_exchange.publish(
-                aio_pika.Message(body=payload), routing_key=""
-            )
-        except Exception:
-            print("cannot publish heartbeat")
-            # Best-effort supervisor heartbeat; avoid crashing supervisor on transient broker errors
-            pass
+        })
 
     # ---------------- processes ----------------
     async def spawn_worker(self) -> Process:
         worker_num = len(self.workers) + len(self.pending_processes)
         p = Process(target=_worker_entry, args=(self.supervisor_id,), name=f"AsyncFarmWorker-{worker_num}")
-        p.start()
+
+        # Textual captures stdout/stderr with objects that don't have a valid fileno().
+        # When using the 'spawn' start method (default on macOS), multiprocessing will
+        # attempt to pass fds_to_keep including those of stdout/stderr, which raises
+        # `ValueError: bad value(s) in fds_to_keep)`. Temporarily restore real stdio
+        # during process start to avoid that issue.
+        old_stdout, old_stderr = sys.stdout, sys.stderr
+        try:
+            sys.stdout, sys.stderr = sys.__stdout__, sys.__stderr__
+            p.start()
+        finally:
+            sys.stdout, sys.stderr = old_stdout, old_stderr
         print(f"🧑‍🌾 Spawned worker #{worker_num} (PID: {p.pid})")
         self.pending_processes.append(p)
         return p
@@ -220,6 +231,24 @@ class AsyncFarmSupervisor:
                 alive_associated.append(proc)
 
         return [*self.pending_processes, *alive_associated]
+
+    async def terminate_worker(self, worker_id: str) -> None:
+        state = self.workers.pop(worker_id, None)
+        if not state:
+            return
+        proc = state.get("process")
+        print(f"🗑️ Terminating worker {worker_id} (PID: {getattr(proc, 'pid', '-')})...")
+        if proc and proc.is_alive():
+            proc.terminate()
+            try:
+                await await_processes_death([proc], self.shutdown_grace_s)
+            except Exception:
+                pass
+        if proc and proc.is_alive():
+            proc.kill()
+        # Ensure not tracked as pending
+        if proc is not None:
+            self.pending_processes = [p for p in self.pending_processes if p.pid != proc.pid]
 
     # ---------------- loops ----------------
     async def keep_alive_loop(self) -> None:
@@ -261,38 +290,50 @@ class AsyncFarmSupervisor:
     async def scaling_loop(self) -> None:
         assert self.jobs_queue is not None
         while not self.shutdown_requested:
-            # Queue depth (refresh passive declare)
+            # Queue depth (refresh declare)
             try:
-                await self.jobs_queue.declare(passive=True)
+                await self.jobs_queue.declare()
                 message_count = int(getattr(self.jobs_queue.declaration_result, "message_count", 0))
-            except Exception:
+            except Exception as e:
                 # Skip this tick on broker hiccup
+                print("❌ Skip this tick on broker hiccup", e)
                 await asyncio.sleep(self.scale_check_interval)
                 continue
 
-            # Decide scale up/down
-            current_workers = len(self.get_alive_processes())
-            capacity = current_workers * max(1, self.prefetch_per_worker)
+            # Compute current capacity and reconcile min/max
+            alive_count = len(self.get_alive_processes())
+            associated_count = len(self.workers)
+            capacity = alive_count * max(1, self.prefetch_per_worker)
 
-            if message_count > capacity and current_workers < self.max_workers:
-                to_add = min(self.scale_up_batch_size, self.max_workers - current_workers)
-                print(f"📈 Queue backlog detected ({message_count} jobs > {capacity} capacity), scaling up {to_add} workers...")
-                for _ in range(to_add):
-                    await self.spawn_worker()
+            # Ensure at least min_workers are present (including pending)
+            if alive_count < self.min_workers:
+                to_spawn = min(self.min_workers - alive_count, max(0, self.max_workers - alive_count))
+                if to_spawn > 0:
+                    print(f"🧑‍🌾 Ensuring min workers: spawning {to_spawn} (alive {alive_count} < min {self.min_workers})")
+                    for _ in range(to_spawn):
+                        await self.spawn_worker()
+                await asyncio.sleep(self.scale_check_interval)
+                continue
 
-            elif message_count <= max(0, (current_workers - 1) * self.prefetch_per_worker) and current_workers > self.min_workers:
-                # choose idle workers (active_tasks == 0) with recent heartbeat (<= 3 * HEARTBEAT interval)
-                now_ts = time.time()
-                recent_threshold_ts = now_ts - 3 * max(1, HEARTBEAT_INTERVAL_S)
+            # Scale up if backlog exceeds capacity (simple heuristic)
+            if message_count > capacity and alive_count < self.max_workers:
+                to_add = min(self.scale_up_batch_size, self.max_workers - alive_count)
+                if to_add > 0:
+                    print(f"📈 Queue backlog detected ({message_count} jobs > {capacity} capacity), scaling up {to_add} workers...")
+                    for _ in range(to_add):
+                        await self.spawn_worker()
+
+            # Scale down when light and above min; prefer idle workers
+            elif message_count <= max(0, (alive_count - 1) * self.prefetch_per_worker) and associated_count > self.min_workers:
                 idle_now: List[str] = [
                     wid for wid, st in self.workers.items()
-                    if int(st.get("active_tasks", 0)) == 0 and float(st.get("ts", 0)) >= recent_threshold_ts
+                    if int(st.get("active_tasks", 0)) == 0
                 ]
-                remove_count = min(self.scale_down_batch_size, current_workers - self.min_workers, len(idle_now))
-                if remove_count > 0:
-                    print(f"📉 Queue is light ({message_count} jobs), scaling down {remove_count} idle workers...")
-                for wid in idle_now[:remove_count]:
-                    await self.publish_shutdown(wid, self.shutdown_grace_s)
+                removable = min(self.scale_down_batch_size, max(0, associated_count - self.min_workers), len(idle_now))
+                if removable > 0:
+                    print(f"📉 Queue is light ({message_count} jobs), scaling down {removable} idle workers...")
+                    for wid in idle_now[:removable]:
+                        await self.terminate_worker(wid)
 
             await asyncio.sleep(self.scale_check_interval)
 
@@ -302,17 +343,20 @@ class AsyncFarmSupervisor:
             await asyncio.sleep(HEARTBEAT_INTERVAL_S)
 
     async def monitor_workers_heartbeat_loop(self) -> None:
-        while not self.request_shutdown:
-            for worker_id, state in self.workers.values():
-                pass
-                # TODO: implement this
+        timeout_s = 7 * max(1, HEARTBEAT_INTERVAL_S)
+        while not self.shutdown_requested:
+            now_ts = time.time()
+            stale_worker_ids: List[str] = []
 
-def run_supervisor() -> None:
-    sup = AsyncFarmSupervisor()
-    asyncio.run(sup.start())
+            for worker_id, state in list(self.workers.items()):
+                last_ts = state.get("last_heartbeat_timestamp")
+                if last_ts is None or float(last_ts) + timeout_s < now_ts:
+                    stale_worker_ids.append(worker_id)
 
+            for worker_id in stale_worker_ids:
+                print(f"⚠️ Worker {worker_id} missed {timeout_s}s of heartbeats; terminating...")
+                await self.terminate_worker(worker_id)
 
-if __name__ == "__main__":
-    run_supervisor()
+            await asyncio.sleep(HEARTBEAT_INTERVAL_S)
 
 

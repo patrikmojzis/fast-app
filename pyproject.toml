@@ -46,7 +46,8 @@ dependencies = [
     "PyJWT>=2.9.0",
     "aio-pika>=9.4.0",
     "hypercorn>=0.17.3",
-    "fast-validation @ git+https://github.com/patrikmojzis/fast-validation.git"
+    "fast-validation @ git+https://github.com/patrikmojzis/fast-validation.git",
+    "textual>=6.1.0"
 ]
 
 [project.optional-dependencies]

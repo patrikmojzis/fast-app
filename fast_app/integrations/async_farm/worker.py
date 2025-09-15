@@ -18,7 +18,9 @@ from fast_app.utils.queue_utils import import_from_path, boot_if_needed
 from fast_app.core.context import context
 from fast_app.utils.serialisation import safe_int
 from fast_app.utils.logging import setup_logging
-from fast_app.utils.async_farm_utils import decode_message, ack_once, AckGuard
+from fast_app.utils.async_farm_utils import decode_message, AckGuard
+from fast_app.app_provider import boot
+from fast_app.integrations.async_farm.task import Task
 
 
 # Environment configuration with sensible defaults
@@ -51,7 +53,7 @@ class AsyncFarmWorker:
         self.worker_queue: Optional[aio_pika.RobustQueue] = None
         self.jobs_consumer_tag: str = None
 
-        self.active_tasks: Set[asyncio.Task[Any]] = set()
+        self.tasks: Set[Task] = set()
         self.shutdown_requested: bool = False  # prevents double entry
         self.keep_alive: bool = True
         self.hard_timeout_triggered: bool = False
@@ -59,17 +61,16 @@ class AsyncFarmWorker:
 
     # ------------------------- lifecycle -------------------------
     async def start(self) -> None:
-        setup_logging()
+        boot()
         if not self.supervisor_id:
-            logging.info("[WORKER] No supervisor_id present.")
+            logging.warning("[WORKER] No supervisor_id present.")
 
-        logging.info("[WORKER] Starting farm worker...")
+        logging.debug("[WORKER] Starting farm worker...")
         self.connection = await aio_pika.connect_robust(RABBITMQ_URL)
 
         await self.setup_job_listener()
         await self.setup_control()
 
-        logging.info("[WORKER] Attaching signals")
         loop = asyncio.get_running_loop()
         try:
             loop.add_signal_handler(signal.SIGTERM, self.request_shutdown)
@@ -78,7 +79,6 @@ class AsyncFarmWorker:
             # Signals may be unavailable (e.g., on Windows or non-main thread)
             pass
 
-        logging.info("[WORKER] Main gather")
         try:
             await asyncio.gather(
                 self.heartbeat_loop(),
@@ -86,6 +86,7 @@ class AsyncFarmWorker:
                 self.supervisor_watchdog_loop(),
             )
         finally:
+            logging.info("[WORKER] SHUTDOWN: Entry finally block")
             self.request_shutdown()
 
             if self.control_channel:
@@ -112,7 +113,7 @@ class AsyncFarmWorker:
         await self.worker_queue.bind(self.supervisor_to_workers_exchange)
         await self.worker_queue.consume(self.on_control_message, no_ack=True)
 
-    def request_shutdown(self, grace_s: Optional[int] = None) -> None:
+    def request_shutdown(self) -> None:
         logging.info("[WORKER] ENTRY request_shutdown")
         if self.shutdown_requested:
             return
@@ -125,67 +126,106 @@ class AsyncFarmWorker:
             await message.nack(requeue=True)
             return
 
-        task = asyncio.create_task(self.handle_message_with_timeouts(message))
-        self.active_tasks.add(task)
-        task.add_done_callback(lambda _: self.active_tasks.discard(task))
+        task = Task(message)
+
+        self.tasks.add(task)
+        async def _on_done(_: Task) -> None:
+            self.tasks.discard(task)
+
+        task.add_done_callback(_on_done)
+        task.add_hard_timeout_callback(lambda t: self.on_task_hard_timeout(t))
+
+        await task.run()
 
     async def on_control_message(self, message: aio_pika.IncomingMessage) -> None:
-        logging.info(f"[WORKER] received control message")
         payload = decode_message(message.body)
         if not payload:
+            logging.warning(f"[WORKER] Received control message with no payload.")
             return
 
-        logging.info(f"[WORKER] received control message `{payload}`")
+        logging.debug(f"[WORKER] Received control message `{payload}`")
         
         if payload.get("type") == "shutdown":
-            logging.info("[WORKER] received shutdown message")
-            await self.request_shutdown()
+            logging.info("[WORKER] SHUTDOWN: Command received")
+            self.request_shutdown()
         elif payload.get("type") == "heartbeat":
-            logging.info("[WORKER] received heartbeat message")
+            logging.debug("[WORKER] Supervisor heartbeat message")
             if self.supervisor_id and payload.get("supervisor_id") == self.supervisor_id:
                 self.last_supervisors_heartbeat_timestamp = payload.get("timestamp") or time.time()
 
     # ------------------------- publishers -------------------------
+    async def publish_to_supervisor(self, body: dict) -> None:
+        if not self.supervisor_id:
+            return
+
+        body = json.dumps(body).encode("utf-8")
+        try:
+            await self.worker_to_supervisor_exchange.publish(
+                Message(body=body, delivery_mode=aio_pika.DeliveryMode.PERSISTENT),
+                routing_key=f"supervisor.{self.supervisor_id}",
+            )
+        except Exception as e:
+            # Best-effort heartbeat; ignore failures
+            logging.error(f"Error publishing to supervisor: {e}")
+
     async def publish_heartbeat(self) -> None:
-        body = json.dumps({
+        await self.publish_to_supervisor({
                 "type": "heartbeat",
                 "supervisor_id": self.supervisor_id,
                 "worker_id": self.worker_id,
                 "pid": os.getpid(),
                 "start_timestamp": self.start_timestamp,
-                "active_tasks": len(self.active_tasks),
+                "active_tasks": len(self.tasks),
                 "timestamp": time.time(),
-            }).encode("utf-8")
+            })
 
-        try:
-            await self.worker_to_supervisor_exchange.publish(
-                Message(body=body, delivery_mode=aio_pika.DeliveryMode.PERSISTENT),
-                routing_key=f"supervisor.{self.supervisor_id}",
-            )
-        except Exception as e:
-            # Best-effort heartbeat; ignore failures
-            logging.info(f"Error publishing heartbeat: {e}")
-
-    async def publish_stuck_task_event(self) -> None:
-        if not self.supervisor_id:
-            return
-
-        body = json.dumps({
+    async def publish_stuck_task_event(self, task: Task) -> None:
+        await self.publish_to_supervisor({
                 "type": "stuck_task",
                 "worker_id": self.worker_id,
                 "pid": os.getpid(),
                 "start_timestamp": self.start_timestamp,
                 "timestamp": time.time(),
-            }).encode("utf-8")
+                "task": {
+                    "func_path": task.func_path,
+                }
+            })
 
-        try:
-            await self.worker_to_supervisor_exchange.publish(
-                Message(body=body, delivery_mode=aio_pika.DeliveryMode.PERSISTENT),
-                routing_key=f"supervisor.{self.supervisor_id}",
-            )
-        except Exception as e:
-            # Best-effort heartbeat; ignore failures
-            logging.info(f"Error publishing stuck task event: {e}")
+    async def publish_soft_timeout_task_event(self, task: Task) -> None:
+        await self.publish_to_supervisor({
+            "type": "soft_timeout_task",
+            "worker_id": self.worker_id,
+            "pid": os.getpid(),
+            "start_timestamp": self.start_timestamp,
+            "timestamp": time.time(),
+            "task": {
+                "func_path": task.func_path,
+            }
+        })
+
+    async def publish_success_task_event(self, task: Task, result: Any) -> None:
+        await self.publish_to_supervisor({
+            "type": "success_task",
+            "worker_id": self.worker_id,
+            "pid": os.getpid(),
+            "start_timestamp": self.start_timestamp,
+            "timestamp": time.time(),
+            "task": {
+                "func_path": task.func_path,
+            }
+        })
+
+    async def publish_failure_task_event(self, task: Task, exception: Exception) -> None:
+        await self.publish_to_supervisor({
+            "type": "failure_task",
+            "worker_id": self.worker_id,
+            "pid": os.getpid(),
+            "start_timestamp": self.start_timestamp,
+            "timestamp": time.time(),
+            "task": {
+                "func_path": task.func_path,
+            }
+        })
 
     # ------------------------- loops -------------------------
     async def heartbeat_loop(self) -> None:
@@ -200,134 +240,56 @@ class AsyncFarmWorker:
 
         if self.jobs_queue and self.jobs_consumer_tag:
             try:
-                logging.info(f"[WORKER] Canceling consuming")
+                logging.debug(f"[WORKER] Canceling consuming...")
                 await self.jobs_queue.cancel(self.jobs_consumer_tag)  # Stop accepting new jobs
             except aio_pika.exceptions.ChannelInvalidStateError:
-                logging.info(f"[WORKER] Exception canceling queue ChannelInvalidStateError")
+                logging.warning(f"[WORKER] Exception canceling queue ChannelInvalidStateError")
                 pass
 
         # Wait for tasks to drain with grace
-        # TODO: sync grace_s this with soft limit of a task
-        grace_period_s = WORKER_SHUTDOWN_GRACE_S
-        logging.info(f"[WORKER] Waiting for tasks {grace_period_s} s...")
+        grace_period_s = max(task.soft_timeout_s for task in self.tasks) if self.tasks else WORKER_SHUTDOWN_GRACE_S
+        logging.debug(f"[WORKER] Waiting for tasks {grace_period_s} s...")
         deadline = time.time() + float(grace_period_s)
-        while self.active_tasks and time.time() < deadline:
+        while self.tasks and time.time() < deadline:
             await asyncio.sleep(0.2)
 
         self.keep_alive = False
 
-        logging.info("[WORKER] Done")
+        logging.debug("[WORKER] Done")
 
     async def supervisor_watchdog_loop(self) -> None:
         # Watch for supervisor heartbeat; if supervisor stops sending recent ts, shutdown
-        timeout = 3 * max(1, HEARTBEAT_INTERVAL_S)
+        timeout = 7 * max(1, HEARTBEAT_INTERVAL_S)
         while not self.shutdown_requested and self.supervisor_id is not None:
             if not self.last_supervisors_heartbeat_timestamp:
                 if self.start_timestamp + timeout < time.time():
+                    logging.info("[WORKER] SHUTDOWN: No supervisor heartbeat received & start_timestamp + timeout < time.time()")
                     self.request_shutdown()
             else:
                 if self.last_supervisors_heartbeat_timestamp + timeout < time.time():
+                    logging.info("[WORKER] SHUTDOWN: Supervisor skipped heartbeat for too long")
                     self.request_shutdown()
+            # Yield to event loop to avoid busy loop starving IO
+            await asyncio.sleep(HEARTBEAT_INTERVAL_S)
 
-    # ------------------------- task handling -------------------------
-    async def handle_message_with_timeouts(self, message: aio_pika.IncomingMessage) -> None:
-        try:
-            await self.run_message_with_timeouts(message)
-        except Exception:
-            guard = AckGuard()
-            await ack_once(message, guard)
+    # ------------------------- task callbacks -------------------------
+    async def on_task_hard_timeout(self, task: Task) -> None:
+        self.hard_timeout_triggered = True
+        await self.publish_stuck_task_event(task)
+        logging.info("[WORKER] SHUTDOWN: Hard timeout triggered")
+        self.request_shutdown() 
+        await asyncio.sleep(120)  # 2 minutes
+        sys.exit(1) # force quit 
 
-    async def run_message_with_timeouts(self, message: aio_pika.IncomingMessage) -> None:
-        payload = pickle.loads(message.body)
+    async def on_task_soft_timeout(self, task: Task) -> None:
+        await self.publish_soft_timeout_task_event(task)
 
-        func_path = payload.get("func_path")
-        args_pickled = payload.get("args_pickled", pickle.dumps((), protocol=pickle.HIGHEST_PROTOCOL))
-        kwargs_pickled = payload.get("kwargs_pickled", pickle.dumps({}, protocol=pickle.HIGHEST_PROTOCOL))
-        if payload.get("args_compressed"):
-            import zlib
-            args_pickled = zlib.decompress(args_pickled)
-        if payload.get("kwargs_compressed"):
-            import zlib
-            kwargs_pickled = zlib.decompress(kwargs_pickled)
-        args = pickle.loads(args_pickled)
-        kwargs = pickle.loads(kwargs_pickled)
+    async def on_task_success(self, task: Task, result: Any) -> None:
+        await self.publish_success_task_event(task, result)
 
-        # Install context snapshot and boot if provided
-        try:
-            snap = payload.get("ctx_snapshot") or {}
-            if isinstance(snap, dict):
-                context.install(snap)
-        except Exception:
-            # Do not fail task on context installation issues
-            pass
-
-        boot_args = payload.get("boot_args") or {}
-        try:
-            boot_if_needed(boot_args)
-        except Exception:
-            # Best-effort boot
-            pass
-
-        func: Callable[..., Any]
-        if not func_path:
-            # Reject non-importable tasks for safety
-            await ack_once(message, AckGuard())
-            return
-        func = import_from_path(func_path)
-
-        async def run_callable() -> Any:
-            return await func(*args, **kwargs)
-
-        # Implement soft/hard timeouts
-        task = asyncio.create_task(run_callable())
-
-        # Per-message header overrides
-        headers = (message.headers or {})
-        soft_timeout_s = safe_int(headers.get("soft_timeout_s"), SOFT_TIMEOUT_S, 0, 24 * 3600)
-        hard_timeout_s = safe_int(headers.get("hard_timeout_s"), HARD_TIMEOUT_S, 1, 48 * 3600)
-        if hard_timeout_s <= soft_timeout_s:
-            hard_timeout_s = soft_timeout_s + 1
-
-        guard = AckGuard()
-
-        async def soft_timeout() -> None:
-            for _ in range(soft_timeout_s):
-                if task.done():
-                    return
-                await asyncio.sleep(1)
-
-            if not task.done():
-                task.cancel()
-
-        async def hard_timeout() -> None:
-            for _ in range(hard_timeout_s):
-                if task.done():
-                    return
-                await asyncio.sleep(1)
-
-            if not task.done() and not self.hard_timeout_triggered:
-                self.hard_timeout_triggered = True
-                await ack_once(message, guard)
-                await self.publish_stuck_task_event()
-                await self.request_shutdown(120)  # 2 minutes
-                sys.exit(1)
-
-        soft_t = asyncio.create_task(soft_timeout())
-        hard_t = asyncio.create_task(hard_timeout())
-
-        try:
-            await task
-            await ack_once(message, guard)
-        except asyncio.CancelledError:
-            # Soft timeout cancellation
-            await ack_once(message, guard)
-        except Exception:
-            # User code raised; ack to avoid poison loop
-            await ack_once(message, guard)
-        finally:
-            soft_t.cancel()
-            hard_t.cancel()
-
+    async def on_task_failure(self, task: Task, exception: Exception) -> None:
+        await self.publish_failure_task_event(task, exception)
+    
 
 def _run() -> None:
     worker = AsyncFarmWorker(supervisor_id=os.getenv("SUPERVISOR_ID"))

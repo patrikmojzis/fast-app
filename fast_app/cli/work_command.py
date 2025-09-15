@@ -1,6 +1,7 @@
 """Start the async_farm supervisor: fast-app work"""
 
 import argparse
+import asyncio
 
 from .command_base import CommandBase
 
@@ -24,12 +25,26 @@ class WorkCommand(CommandBase):
             action="store_true",
             help="Run in foreground (default). Provided for future parity."
         )
+        parser.add_argument(
+            "--tui",
+            action="store_true",
+            help="Start interactive TUI dashboard for the supervisor"
+        )
 
-    def execute(self, args: argparse.Namespace) -> None:  # noqa: ARG002
+    def execute(self, args: argparse.Namespace) -> None:
         # Import lazily to keep CLI import cost low
-        from fast_app.integrations.async_farm.supervisor import run_supervisor
+        from fast_app.integrations.async_farm.supervisor import AsyncFarmSupervisor
 
-        # Blocks until supervisor shuts down
-        run_supervisor()
+        sup = AsyncFarmSupervisor()
+
+        if getattr(args, "tui", False):
+            # Start supervisor and TUI together; shut down supervisor when TUI exits
+            from fast_app.integrations.async_farm.supervisor_tui import SupervisorTUI
+            sup_tui = SupervisorTUI(sup)
+            sup_tui.run()
+            return
+
+        # Default: run supervisor without TUI; blocks until shutdown
+        asyncio.run(sup.run())
 
 

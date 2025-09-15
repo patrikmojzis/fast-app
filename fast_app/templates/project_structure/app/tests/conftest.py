@@ -5,12 +5,12 @@ import os
 
 import pytest_asyncio
 
-from app.modules.asgi import create_app
+from app.modules.asgi.quart import create_quart_app
 
 
 @pytest_asyncio.fixture(scope="function")
 async def app():
-    quart_app = create_app()
+    quart_app = create_quart_app()
     quart_app.config['TESTING'] = True
     yield quart_app
 
@@ -18,15 +18,21 @@ async def app():
 @pytest_asyncio.fixture(scope='function', autouse=True)
 async def setup_session():
     # Reset MongoDB global variables to avoid event loop issues
-    import fast_app.database.mongo
-    fast_app.database.mongo.clear()
+    from fast_app.database import clear
+    await clear()
 
-    # Clear caches
-    from fast_app.utils.database_cache import DatabaseCache
-    DatabaseCache.flush()
+    # Clear caches (best-effort in tests; ignore if Redis not available)
+    try:
+        from fast_app.utils.database_cache import DatabaseCache
+        DatabaseCache.flush()
+    except Exception:
+        pass
 
-    from fast_app.core.cache import Cache
-    Cache.flush()
+    try:
+        from fast_app.core.cache import Cache
+        await Cache.flush()
+    except Exception:
+        pass
 
     yield
     
