@@ -20,8 +20,8 @@ def setup_logging(log_file_name: str | None = None):
     """
     global _logging_configured, _log_file_path
     
-    # Get the project root directory (where this script's parent's parent is)
-    project_root = Path(__file__).parent.parent.parent
+    # Get the project root directory using the current working directory
+    project_root = Path.cwd()
     log_dir = project_root / "log"
     file_name = log_file_name if log_file_name else os.getenv('LOG_FILE_NAME', 'app.log')
     log_file = log_dir / file_name
