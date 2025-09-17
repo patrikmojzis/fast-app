@@ -24,7 +24,7 @@ async def _publish_pickled(payload: dict[str, Any], ttl_ms: int, headers: dict[s
         queue_name = os.getenv("ASYNC_FARM_JOBS_QUEUE", "async_farm.jobs")
         await channel.declare_queue(queue_name, durable=True)
         body = pickle.dumps(payload, protocol=pickle.HIGHEST_PROTOCOL)
-        expiration = str(ttl_ms) if ttl_ms > 0 else None
+        expiration = ttl_ms if ttl_ms > 0 else None
         props = {"headers": headers or {}}
         if expiration is not None:
             props["expiration"] = expiration
