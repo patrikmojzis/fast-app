@@ -10,6 +10,7 @@ import logging
 from dataclasses import dataclass, field
 import sys
 from typing import Any, Callable, Optional, Set, Awaitable
+import inspect
 
 import aio_pika
 from aio_pika import ExchangeType, Message
@@ -88,6 +89,8 @@ class Task:
 
     def _start_timeouts(self):
         async def soft_timeout() -> None:
+            if self.soft_timeout_s <= 0:
+                return
             for _ in range(self.soft_timeout_s):
                 if self.asyncio_task and self.asyncio_task.done():
                     return
@@ -97,9 +100,13 @@ class Task:
                 if self.on_soft_timeout:
                     await self.on_soft_timeout(self)
                 logging.warning(f"[WORKER TASK] Soft timeout reached for {self.func_path} ({self.soft_timeout_s}s)")
+                # Cancel the asyncio Task wrapper; actual work may still be running in a thread
+                # Hard-timeout watchdog remains responsible for finalization
                 self.asyncio_task.cancel()
 
         async def hard_timeout() -> None:
+            if self.hard_timeout_s <= 0:
+                return
             for _ in range(self.hard_timeout_s):
                 if self.asyncio_task and self.asyncio_task.done():
                     return
@@ -151,14 +158,23 @@ class Task:
 
     async def run(self):
         if not self.func:
-            await self.ack_guard.ack() 
+            logging.warning(f"[WORKER TASK] No function to execute for {self.func_path}")
+            # Nothing to execute; still finalize bookkeeping so worker can drop the task
+            await self.ack_guard.ack()
+            if self.on_done:
+                await self.on_done(self)
             return
 
         async def run_callable() -> Any:
             logging.debug(f"[WORKER TASK] Running {self.func_path} with args {self.args} and kwargs {self.kwargs}")
             if self.context_snapshot:
                 context.install(self.context_snapshot)
-            return await self.func(*self.args, **self.kwargs)
+            func = self.func
+            assert func is not None
+            if inspect.iscoroutinefunction(func):
+                return await func(*self.args, **self.kwargs)
+            # Execute sync callables off the event loop
+            return await asyncio.to_thread(func, *self.args, **self.kwargs)
 
         self.asyncio_task = asyncio.create_task(run_callable())
         self._start_timeouts()

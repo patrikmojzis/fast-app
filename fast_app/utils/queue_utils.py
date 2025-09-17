@@ -3,6 +3,7 @@ import asyncio
 import inspect
 import importlib
 from typing import Any, Callable
+import types
 
 
 def boot_if_needed(boot_args: dict[str, Any]) -> None:
@@ -45,9 +46,59 @@ def to_dotted_path(obj: Any) -> str:
 
 
 def import_from_path(path: str) -> Any:
-    """Import an object from a dotted path like 'package.module:Class' or 'package.module.func'."""
-    module_path, _, attr = path.replace(":", ".").rpartition(".")
-    if not module_path or not attr:
+    """Import an object from a dotted path.
+
+    Supports:
+    - package.module.func
+    - package.module:func
+    - package.module.Class
+    - package.module.Class.method (auto-binds by instantiating Class with no args)
+    """
+    dotted = path.replace(":", ".")
+    parts = dotted.split(".")
+    if len(parts) < 2:
         raise ValueError(f"Invalid import path: {path}")
-    module = importlib.import_module(module_path)
-    return getattr(module, attr)
+
+    # Find the deepest importable module prefix
+    module: Any | None = None
+    for i in range(len(parts), 0, -1):
+        module_name = ".".join(parts[:i])
+        try:
+            module = importlib.import_module(module_name)
+            attrs = parts[i:]
+            break
+        except ModuleNotFoundError:
+            continue
+
+    if module is None:
+        # Fallback: try typical split once
+        module_name, _, _ = dotted.rpartition(".")
+        if not module_name:
+            raise ValueError(f"Invalid import path: {path}")
+        module = importlib.import_module(module_name)
+        attrs = []
+
+    # Resolve attribute chain
+    obj: Any = module
+    prev: Any = None
+    for attr in attrs:
+        prev = obj
+        obj = getattr(obj, attr)
+
+    # Auto-bind unbound instance method defined on a class
+    if isinstance(prev, type) and isinstance(obj, types.FunctionType):
+        # obj is function defined on class `prev` (descriptor). Create a callable that instantiates and dispatches
+        func = obj
+        cls = prev
+        if inspect.iscoroutinefunction(func):
+            async def _bound_async(*args: Any, **kwargs: Any) -> Any:
+                instance = cls()
+                return await func(instance, *args, **kwargs)
+            return _bound_async
+        else:
+            def _bound_sync(*args: Any, **kwargs: Any) -> Any:
+                instance = cls()
+                return func(instance, *args, **kwargs)
+            return _bound_sync
+
+    return obj

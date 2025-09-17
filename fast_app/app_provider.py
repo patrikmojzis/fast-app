@@ -1,5 +1,8 @@
 from typing import Any, Dict, List, Type, Optional, TYPE_CHECKING
 
+import os
+import sys
+
 from fast_app.application import Application
 from fast_app.core.storage import Storage
 from fast_app.core.storage_drivers import get_builtin_storage_drivers
@@ -32,6 +35,12 @@ def boot(*,
         autodiscovery: Whether to run observers and policies autodiscovery.
         events: Optional events configuration. If None, tries autodiscovery from app.event_provider.
     """
+    # Ensure project root is importable so user modules  can be resolved
+    # in subprocesses (e.g., async_farm workers) during unpickling
+    project_root = os.environ.get("PROJECT_ROOT") or os.getcwd()
+    if project_root and project_root not in sys.path:
+        sys.path.insert(0, project_root)
+
     app = Application()
     if app.is_booted():
         return
