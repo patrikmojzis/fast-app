@@ -76,7 +76,8 @@ class Model():
     @classmethod
     @cached_db_retrieval()
     async def exec_find(cls, *args, **kwargs) -> 'AsyncIOMotorCursor':
-        return await (await cls.collection_cls()).find(*args, **kwargs)
+        cursor = (await cls.collection_cls()).find(*args, **kwargs)
+        return [d async for d in cursor]
 
     @classmethod
     @cached_db_retrieval()
@@ -339,8 +340,8 @@ class Model():
     @classmethod
     async def find(cls: type[T], query: dict[str, any], **kwargs) -> list[T]:
         final_query = await cls.query_modifier(query, "find", cls.collection_name())
-        cursor = await cls.exec_find(final_query, **kwargs)
-        return [cls(**data) async for data in cursor]
+        results = await cls.exec_find(final_query, **kwargs)
+        return [cls(**data) for data in results]
 
     @classmethod
     async def find_one(cls: type[T], query: dict[str, any], **kwargs) -> Optional[T]:
