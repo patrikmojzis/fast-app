@@ -10,3 +10,5 @@ REDIS_BROADCAST_DB = int(os.getenv("REDIS_BROADCAST_DB", 13))
 
 # Redis database for scheduler state
 REDIS_SCHEDULER_DB = int(os.getenv("REDIS_SCHEDULER_DB", 12))
+
+REDIS_SOCKETIO_DB = int(os.getenv("REDIS_SOCKETIO_DB", 11))

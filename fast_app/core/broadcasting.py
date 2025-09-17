@@ -1,6 +1,7 @@
 import json
 import importlib
 import asyncio
+import os
 import socketio
 from typing import TYPE_CHECKING, AsyncGenerator, Any, Optional, Union
 
@@ -36,7 +37,8 @@ async def broadcast(event: 'BroadcastEvent') -> bool:
     payload = await transform_broadcast_data(await event.broadcast_as())
     
     # Publish to Redis
-    mgr = socketio.AsyncRedisManager("redis://localhost:6379/0")
+    redis_url = f"redis://{os.getenv("REDIS_HOST", "localhost")}:{os.getenv("REDIS_PORT", 6379)}/{os.getenv("REDIS_SOCKETIO_DB", 11)}"
+    mgr = socketio.AsyncRedisManager(redis_url)
     await asyncio.gather(*(mgr.emit(
         event.get_event_name(), 
         payload, 
