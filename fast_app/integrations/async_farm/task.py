@@ -11,8 +11,6 @@ from dataclasses import dataclass, field
 import sys
 from typing import Any, Callable, Optional, Set, Awaitable
 import inspect
-import os
-import time
 
 import aio_pika
 from aio_pika import ExchangeType, Message
@@ -59,8 +57,6 @@ class Task:
         self.on_success = on_success
         self.on_failure = on_failure
         self.on_done = on_done
-        self.task_id: str = f"{os.getpid()}_{int(time.time() * 1_000_000)}"
-        self.started_at: Optional[float] = None
 
     def _parse_func_path(self) -> Optional[Callable[..., Any]]:
         func_path = self.payload.get("func_path")
@@ -180,8 +176,6 @@ class Task:
             # Execute sync callables off the event loop
             return await asyncio.to_thread(func, *self.args, **self.kwargs)
 
-        if self.started_at is None:
-            self.started_at = time.time()
         self.asyncio_task = asyncio.create_task(run_callable())
         self._start_timeouts()
         # add_done_callback expects a sync callable; wrap to schedule the async handler
