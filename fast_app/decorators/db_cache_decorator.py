@@ -77,18 +77,25 @@ def _version_prefix(namespace: Optional[str]) -> str:
 
 
 def _infer_namespace(func: Callable, args: tuple, kwargs: dict) -> Optional[str]:
-    # If first arg is a Model class, use its model_name; if an instance, use its class
-    if args:
-        first = args[0]
-        # Classmethod on Model subclass
-        model_cls = None
-        if isinstance(first, type) and hasattr(first, 'model_name'):
-            model_cls = first
-        elif hasattr(first, '__class__') and hasattr(first.__class__, 'model_name'):
-            model_cls = first.__class__
-        if model_cls and callable(getattr(model_cls, 'model_name', None)):
-            try:
-                return model_cls.collection_name()  # type: ignore[attr-defined]
-            except Exception:
-                return None
+    # If first arg is a Model class or instance, derive namespace from collection_name()
+    if not args:
+        return None
+
+    first = args[0]
+
+    # Case 1: classmethod call on a Model subclass
+    if isinstance(first, type) and callable(getattr(first, 'collection_name', None)):
+        try:
+            return first.collection_name()  # type: ignore[attr-defined]
+        except Exception:
+            return None
+
+    # Case 2: instance method call on a Model instance
+    model_cls = getattr(first, '__class__', None)
+    if model_cls and callable(getattr(model_cls, 'collection_name', None)):
+        try:
+            return model_cls.collection_name()  # type: ignore[attr-defined]
+        except Exception:
+            return None
+
     return None
