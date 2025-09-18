@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import sys
 import time
 from typing import Optional, TYPE_CHECKING
 
@@ -34,6 +36,7 @@ class SupervisorTUI(App):  # type: ignore[misc]
         Binding("[", "dec_max", "Max-", show=True),
         Binding("x", "shutdown", "Shutdown", show=True),
         Binding("r", "refresh", "Refresh", show=True),
+        Binding("R", "reboot", "Reboot", show=True),
     ]
 
     def __init__(self, supervisor: 'AsyncFarmSupervisor') -> None:
@@ -143,18 +146,38 @@ class SupervisorTUI(App):  # type: ignore[misc]
             pass
         await self._update_view()
 
+    async def action_reboot(self) -> None:
+        # Gracefully stop supervisor, then re-exec the current CLI with same args
+        await self._shutdown_supervisor(wait=True)
+        self._reexec_current_process()
+
     async def _shutdown_supervisor_and_exit(self) -> None:
         # Request graceful shutdown and wait for supervisor to finish
         try:
-            self.supervisor.request_shutdown()
-            if self._supervisor_task is not None:
-                try:
-                    await self._supervisor_task
-                except Exception:
-                    pass
+            await self._shutdown_supervisor(wait=True)
         except Exception:
             pass
         # Exit TUI after supervisor stops (or on best effort)
         self.exit()
+
+    async def _shutdown_supervisor(self, wait: bool = True) -> None:
+        # Request graceful shutdown and optionally wait for completion
+        self.supervisor.request_shutdown()
+        if wait and self._supervisor_task is not None:
+            try:
+                await self._supervisor_task
+            except Exception:
+                pass
+
+    def _reexec_current_process(self) -> None:
+        # Replace current process with a fresh interpreter running the CLI with same args
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+        except Exception:
+            pass
+        env = os.environ.copy()
+        argv = [sys.executable, "-m", "fast_app.cli", *sys.argv[1:]]
+        os.execvpe(sys.executable, argv, env)
 
 
