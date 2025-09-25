@@ -39,6 +39,6 @@ class InitCommand(CommandBase):
         """Display next steps for user."""
         print("\n🎉 Project created successfully!")
         print("\n📋 Next steps:")
-        print("1. python -m venv .venv")
-        print("2. source .venv/bin/activate")
+        print("1. cp .env.example .env")
+        print("2. fast-app serve")
         print("3. Start developing!")

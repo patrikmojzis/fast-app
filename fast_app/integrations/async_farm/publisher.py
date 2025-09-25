@@ -15,6 +15,8 @@ from fast_app.utils.queue_utils import to_dotted_path
 
 
 RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
+SOFT_TIMEOUT_S = os.getenv("SOFT_TIMEOUT_S")
+HARD_TIMEOUT_S = os.getenv("HARD_TIMEOUT_S")
 
 
 async def _publish_pickled(payload: dict[str, Any], ttl_ms: int, headers: dict[str, Any] | None = None) -> None:
@@ -35,7 +37,7 @@ async def _publish_pickled(payload: dict[str, Any], ttl_ms: int, headers: dict[s
         await connection.close()
 
 
-def enqueue_callable(func: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
+async def enqueue_callable(func: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
     """Serialize and publish callable execution request.
 
     - Tries dotted-path import first for safety and small payloads.
@@ -87,8 +89,8 @@ def enqueue_callable(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Non
 
     # Optional per-message soft timeout header passthrough if user supplies special kwarg
     headers: dict[str, Any] | None = None
-    soft_timeout = kwargs.pop("__soft_timeout_s", None)
-    hard_timeout = kwargs.pop("__hard_timeout_s", None)
+    soft_timeout = kwargs.pop("__soft_timeout_s", None) or (int(SOFT_TIMEOUT_S) if SOFT_TIMEOUT_S else None)
+    hard_timeout = kwargs.pop("__hard_timeout_s", None) or (int(HARD_TIMEOUT_S) if HARD_TIMEOUT_S else None)
     if soft_timeout is not None or hard_timeout is not None:
         headers = {}
         if soft_timeout is not None:
@@ -96,13 +98,7 @@ def enqueue_callable(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Non
         if hard_timeout is not None:
             headers["hard_timeout_s"] = int(hard_timeout)
 
-    async def publish() -> None:
-        await _publish_pickled(payload, ttl_ms, headers=headers)
-
-    loop = asyncio.get_running_loop()
-    if loop.is_closed() or getattr(loop, "is_closing", lambda: False)():
-        raise RuntimeError("event loop closed or closing")
-    loop.create_task(publish())
+    await _publish_pickled(payload, ttl_ms, headers=headers)
 
 
 

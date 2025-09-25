@@ -13,28 +13,23 @@ class AuthorizeMiddleware(Middleware):
 
     Usage examples:
         - Instance ability (after ModelBindingMiddleware binds `post`):
-            @middleware(AuthorizeMiddleware("post", "update"))
+            @middleware(AuthorizeMiddleware("update", "post"))
             async def update_post(post: Post):
                 ...
 
         - Class ability:
-            @middleware(AuthorizeMiddleware(Post, "create"))
+            @middleware(AuthorizeMiddleware("create", Post))
             async def create_post():
-                ...
-
-        - Custom policy callable (no ability string):
-            @middleware(AuthorizeMiddleware(lambda user: user.is_admin()))
-            async def admin_only():
                 ...
     """
 
     def __init__(
         self,
+        ability: str,
         target: Union[str, type, Callable[..., Awaitable[bool]]],
-        ability: Optional[str] = None,
     ) -> None:
-        self._target = target
         self._ability = ability
+        self._target = target
 
     async def handle(
         self,
@@ -47,7 +42,7 @@ class AuthorizeMiddleware(Middleware):
             raise UnauthorisedException()
 
         # Resolve target if it is a kwarg reference
-        resolved_target: Union[type, Callable[..., Awaitable[bool]], Any]
+        resolved_target: Union[type, Any]
         if isinstance(self._target, str):
             if self._target not in kwargs:
                 raise ValueError(
@@ -57,7 +52,7 @@ class AuthorizeMiddleware(Middleware):
         else:
             resolved_target = self._target
 
-        await user.authorize(resolved_target, self._ability)
+        await user.authorize(self._ability, resolved_target)
 
         return await next_handler(*args, **kwargs)
 

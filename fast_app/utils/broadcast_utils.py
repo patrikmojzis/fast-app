@@ -5,7 +5,6 @@ import importlib
 
 import redis.asyncio as redis
 
-from fast_app.contracts.websocket_event import WebsocketEvent
 from fast_app.contracts.resource import Resource
 from fast_app.utils.serialisation import serialise    
 from fast_app.contracts.room import Room

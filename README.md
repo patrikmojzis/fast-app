@@ -54,7 +54,7 @@ fast-app make <type> <Name>
 
 Common types (see `fast_app/cli/make_command.py` for the full list):
 
-- event, broadcast_event, websocket_event
+- event, broadcast_event
 - listener
 - model
 - notification, notification_channel
@@ -80,8 +80,8 @@ The generator creates missing parent directories automatically.
 Copy optional feature modules into your project:
 
 ```bash
-fast-app publish auth   # copies auth controllers, middleware, models, jobs
-fast-app publish ws     # copies websocket controller
+fast-app publish auth       # copies auth controllers, middleware, models, jobs
+fast-app publish socketio   # copies sio basic project structure
 ```
 If you pass an unknown package, the CLI prints the list of available ones.
 
@@ -124,7 +124,6 @@ FastApp’s core abstractions live in `fast_app/contracts`. They interoperate li
 - BroadcastEvent / BroadcastChannel: Realtime events via broadcasting layer
 - Notification / NotificationChannel: Pluggable notification delivery
 - ValidatorRule: Custom validation rules for request/query validation
-- WebsocketEvent: Typed websocket events (if you enable ws)
 - StorageDriver: Pluggable storage backends (e.g., disk, S3)
 
 Typical request flow: Route → Middlewares → Controller/Handler → Schema validation → Model → Resource.
@@ -247,12 +246,12 @@ Simple queue wrapper with two modes:
 - rq: enqueue for RQ workers (set `QUEUE_DRIVER=rq`)
 
 ```python
-from fast_app.core.queue import queue
+from fast_app import queue
 
 def do_work():
     ...
 
-queue(do_work)
+await queue(do_work)
 ```
 
 ### scheduler
@@ -302,7 +301,7 @@ The template includes a `tests/conftest.py` starter.
 Call `boot()` at application startup to configure environment, logging, models and events.
 
 ```python
-from fast_app.app_provider import boot
+import fast_app.boot
 
 boot(
     autodiscovery=True,               # discover models/observers/policies and events

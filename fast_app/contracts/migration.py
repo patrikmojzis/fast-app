@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import Any
-from fast_app.app_provider import boot
+# from fast_app.app_provider import boot
 
 
 class Migration(ABC):
     def boot(self) -> None:
         """Optional setup before running the migration."""
-        boot()
+        import fast_app.boot
 
     @abstractmethod
     def migrate(self) -> Any:

@@ -162,7 +162,7 @@ class Model():
         coll = await self.collection()
         query = await self.query_modifier({'_id': self._id}, "update", self.collection_name())
         update_payload = self._build_update_payload(
-            set_values={key: self.get(key) for key in self.fillable_fields()},
+            set_values={key: self.get(key) for key in self.clean.keys()},
             extra_ops=None,
             touch_timestamp=True,
         )

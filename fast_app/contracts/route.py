@@ -13,7 +13,6 @@ class Route(BaseModel):
     middlewares: Optional[list[Union[Middleware, Callable]]] = Field(default=None, description="The middlewares of the route")
     prefix: Optional[str] = Field(default="", description="The prefix for route groups")
     routes: Optional[list['Route']] = Field(default=None, description="Nested routes for groups")
-    is_websocket: bool = Field(default=False, description="Whether this route is a WebSocket route")
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     

@@ -1,11 +1,11 @@
 import importlib
 import inspect
+import logging
 from pathlib import Path
 
 from fast_app.decorators import register_observer, register_policy
 
 
-# TODO: Add support for custom models_dir, observers_dir, policies_dir
 def autodiscover_models() -> None:
     """
     Autodiscover models and registers their corresponding observers and policies.
@@ -27,11 +27,9 @@ def autodiscover_models() -> None:
     models_dir = Path("app/models")
     
     if not models_dir.exists():
-        print(f"📁 No {models_dir} directory found, skipping autodiscovery")
+        logging.info(f"📁 No {models_dir} directory found, skipping autodiscovery")
         return
-        
-    print(f"🔍 Starting model autodiscovery in {models_dir}...")
-    
+            
     # Define discovery mappings for better performance
     discovery_config = [
         ("observers", "Observer", Observer, register_observer),
@@ -59,7 +57,6 @@ def autodiscover_models() -> None:
             
             for class_name, model_cls in model_classes:
                 discovered_count += 1
-                print(f"📋 Found model: {class_name}")
                 
                 # Try to discover and register observer/policy for each model
                 for folder, suffix, base_class, decorator in discovery_config:
@@ -73,7 +70,7 @@ def autodiscover_models() -> None:
                             issubclass(target_cls, base_class)):
                             
                             decorator(target_cls)(model_cls)
-                            print(f"✅ Auto-registered {target_class_name} for {class_name}")
+                            logging.debug(f"✅ Auto-registered {target_class_name} for {class_name}")
                             
                     except ImportError:
                         # Silently ignore missing files - this is expected
@@ -84,4 +81,4 @@ def autodiscover_models() -> None:
             pass
     
     if discovered_count > 0:
-        print(f"🎉 Autodiscovery completed! Found {discovered_count} model(s)")
+        logging.debug(f"🎉 Autodiscovery completed! Found {discovered_count} model(s)")

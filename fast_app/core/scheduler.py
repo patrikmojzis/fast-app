@@ -7,7 +7,6 @@ from typing import Any, Callable, NotRequired, TypedDict
 
 from redis import asyncio as aioredis
 
-from fast_app.config import REDIS_SCHEDULER_DB
 from fast_app.core.queue import queue
 
 
@@ -30,11 +29,9 @@ async def _get_redis() -> aioredis.Redis:
     global _redis
     if _redis is not None:
         return _redis
-    _redis = aioredis.Redis(
-        host=os.getenv("REDIS_HOST", "localhost"),
-        port=int(os.getenv("REDIS_PORT", 6379)),
-        db=REDIS_SCHEDULER_DB,
-        decode_responses=True,
+    _redis = aioredis.Redis.from_url(
+        os.getenv("REDIS_SCHEDULER_URL", "redis://localhost:6379/12"),
+        decode_responses=True
     )
     # Ensure connection is healthy before proceeding
     await _redis.ping()
@@ -71,7 +68,7 @@ async def run_scheduler(jobs: list[SchedulerJobSpec]) -> None:
                 continue
 
             if acquired:
-                queue(func)
+                await queue(func)
                 # Fire-and-forget best-effort timestamp
                 try:
                     await r.set(last_key, datetime.now(timezone.utc).isoformat())

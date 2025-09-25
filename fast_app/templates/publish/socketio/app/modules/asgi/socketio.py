@@ -8,7 +8,7 @@ def create_socketio_app() -> socketio.AsyncServer:
     sio = socketio.AsyncServer(
         async_mode="asgi",
         cors_allowed_origins=get_cors_origins(),
-        client_manager=socketio.AsyncRedisManager(os.getenv("SIO_REDIS_URL","redis://localhost:6379/0"))
+        client_manager=socketio.AsyncRedisManager(os.getenv("REDIS_SOCKETIO_URL","redis://localhost:6379/14"))
     )
 
     sio.register_namespace(GlobalNamespace())

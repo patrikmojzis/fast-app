@@ -6,7 +6,7 @@ import argparse
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
-from fast_app.app_provider import boot
+# from fast_app.app_provider import boot
 
 
 class Command(ABC):
@@ -26,7 +26,7 @@ class Command(ABC):
 
     def boot(self):
         """Optional boot hook. Override to customize environment before execute."""
-        boot()
+        import fast_app.boot
 
     @abstractmethod
     async def execute(self, args: argparse.Namespace) -> Any:

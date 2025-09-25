@@ -1,5 +1,6 @@
 import importlib
 import importlib.util
+import logging
 from typing import Optional, Dict, Type, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -21,7 +22,7 @@ def autodiscover_events() -> Optional[Dict[Type['Event'], List[Type['EventListen
         spec = None
         
     if spec is None:
-        print("📁 No app/event_provider.py found, skipping event autodiscovery")
+        logging.info("📁 No app/event_provider.py found, skipping event autodiscovery")
         return None
 
     try:
@@ -30,14 +31,14 @@ def autodiscover_events() -> Optional[Dict[Type['Event'], List[Type['EventListen
         if hasattr(event_provider_module, 'events'):
             events = getattr(event_provider_module, 'events')
             if isinstance(events, dict):
-                print("🎯 Found event configuration in app.event_provider")
+                logging.debug("🎯 Found event configuration in app.event_provider")
                 return events
             else:
-                print("⚠️ Found 'events' in app.event_provider but it's not a dict")
+                logging.warning("⚠️ Found 'events' in app.event_provider but it's not a dict")
         else:
-            print("📭 No 'events' found in app.event_provider")
+            logging.debug("📭 No 'events' found in app.event_provider")
 
     except Exception as exc:  # Catch inner import errors and report accurately
-        print(f"❌ Error while importing app.event_provider: {exc}")
+        logging.error(f"❌ Error while importing app.event_provider: {exc}")
     
     return None

@@ -72,7 +72,7 @@ def setup_logging(log_file_name: str | None = None):
     _log_file_path = log_file
 
     _logging_configured = True
-    logging.info("Logging configured successfully with global exception handling")
+    logging.debug("Logging configured successfully with global exception handling")
 
 
 def get_log_file_path() -> Path | None:

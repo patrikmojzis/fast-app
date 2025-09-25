@@ -1,5 +1,4 @@
-from fast_app.app_provider import boot
-boot()
+import fast_app.boot
 
 # Use simple quart app
 from .quart import create_quart_app

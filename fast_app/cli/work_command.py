@@ -30,21 +30,26 @@ class WorkCommand(CommandBase):
             action="store_true",
             help="Start interactive TUI dashboard for the supervisor"
         )
+        parser.add_argument(
+            "--verbose",
+            action="store_true",
+            help="Verbose output"
+        )
 
     def execute(self, args: argparse.Namespace) -> None:
         # Import lazily to keep CLI import cost low
         from fast_app.integrations.async_farm.supervisor import AsyncFarmSupervisor
 
-        sup = AsyncFarmSupervisor()
-
         if getattr(args, "tui", False):
             # Start supervisor and TUI together; shut down supervisor when TUI exits
             from fast_app.integrations.async_farm.supervisor_tui import SupervisorTUI
+            sup = AsyncFarmSupervisor(verbose=False)
             sup_tui = SupervisorTUI(sup)
             sup_tui.run()
             return
 
         # Default: run supervisor without TUI; blocks until shutdown
+        sup = AsyncFarmSupervisor(verbose=getattr(args, "verbose", True))
         asyncio.run(sup.run())
 
 

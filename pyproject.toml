@@ -60,6 +60,10 @@ dev = [
     "mypy>=1.17.1"
 ]
 
+expo = [
+    "exponent_server_sdk>=2.1.0"
+]
+
 [project.scripts]
 fast-app = "fast_app.cli.main:main"
 

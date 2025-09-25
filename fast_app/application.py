@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Type, TYPE_CHECKING
 
 from fast_app.decorators.singleton_decorator import singleton
@@ -32,11 +33,11 @@ class Application:
         
         # Log configuration
         total_listeners = sum(len(listeners) for listeners in events.values())
-        print(f"🎯 Configured {len(events)} event(s) with {total_listeners} listener(s)")
+        logging.debug(f"🎯 Configured {len(events)} event(s) with {total_listeners} listener(s)")
         
         for event_class, listeners in events.items():
             listener_names = [listener.__name__ for listener in listeners]
-            print(f"   {event_class.__name__} → {', '.join(listener_names)}")
+            logging.debug(f"   {event_class.__name__} → {', '.join(listener_names)}")
     
     def get_listeners_for_event(self, event_class: Type['Event']) -> List[Type['EventListener']]:
         """

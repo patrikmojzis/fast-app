@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 
 class NewClass(Policy):
-    async def before(self, user: 'Model', ability: str) -> Optional[bool]:
+    async def before(self, ability: str, authorizable: 'Model') -> Optional[bool]:
         """Return True to grant, False to deny, None to continue to method-specific checks."""
         return None
 

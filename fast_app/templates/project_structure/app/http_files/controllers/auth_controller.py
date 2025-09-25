@@ -10,11 +10,10 @@ from fast_app.core.api import validate_request
 from fast_app.exceptions.http_exceptions import UnauthorisedException
 
 
-# async def login():
+# async def login(data: AuthLoginSchema):
 #     """
 #     Login endpoint - creates a new refresh token for the user.
 #     """
-#     await validate_request(AuthLoginSchema)
 #     user = await login_user(**g.validated)
     
 #     auth = await Auth.create({
@@ -25,13 +24,11 @@ from fast_app.exceptions.http_exceptions import UnauthorisedException
 #     return AuthResource(auth)
     
 
-async def refresh():
+async def refresh(data: AuthRefreshSchema):
     """
     Refresh token endpoint - exchanges refresh token for new access token.
     """
-    await validate_request(AuthRefreshSchema)
-
-    auth = await Auth.find_one({'refresh_token': g.validated.get('refresh_token'), 'is_revoked': {"$ne": True}})
+    auth = await Auth.find_one({'refresh_token': data.refresh_token, 'is_revoked': {"$ne": True}})
     if not auth:
         raise UnauthorisedException()
     
@@ -49,7 +46,7 @@ async def logout():
     """
     Logout endpoint - revokes the current refresh token.
     """
-    await g.get('auth').revoke()
+    await g.auth.revoke()
 
     return Response(status=204)
 
@@ -58,7 +55,7 @@ async def logout_all():
     """
     Logout from all devices - revokes all refresh tokens for the user.
     """
-    await g.get('auth').revoke_all()
+    await g.auth.revoke_all()
 
     return Response(status=204)
 

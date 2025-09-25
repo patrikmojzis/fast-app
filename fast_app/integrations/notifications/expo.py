@@ -1,10 +1,6 @@
 import os
 
 import requests
-from exponent_server_sdk import (
-    PushClient,
-    PushMessage,
-)
 
 
 # Basic arguments. You should extend this function with the push features you
@@ -26,6 +22,12 @@ def send_via_push_notification(push_token: str, title: str, body: str, data: dic
         exponent_server_sdk.DeviceNotRegisteredError: If the push token is not registered. (Mark push token as inactive)
         exponent_server_sdk.PushTicketError: If the push notification fails.
     """
+    try:
+        from exponent_server_sdk import PushClient, PushMessage
+    except ImportError:
+        print("Missing exponent-server-sdk package to send Expo push notifications. Run `pip install exponent_server_sdk`.")
+        raise
+
     session = requests.Session()
     session.headers.update(
         {

@@ -11,7 +11,7 @@ class ResourceResponseMiddleware(Middleware):
 
     If a controller returns a Resource (instead of calling to_response()),
     this middleware will convert it by awaiting to_response().
-    No-op for non-HTTP contexts (e.g., websockets) and non-Resource results.
+    No-op for non-HTTP contexts and non-Resource results.
     """
 
     async def handle(self, next_handler: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:

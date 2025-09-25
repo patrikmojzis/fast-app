@@ -3,7 +3,7 @@ from typing import Optional, Literal, Union, TypeVar
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError, BaseModel, Field
-from quart import request, has_request_context, has_websocket_context, websocket, jsonify, g
+from quart import request, has_request_context, jsonify, g
 
 from fast_app.exceptions.common_exceptions import AppException
 from fast_validation import ValidationRuleException, Schema
@@ -57,55 +57,21 @@ def get_bearer_auth_token() -> str | None:
         auth_header = request.headers.get('Authorization')
         if auth_header and auth_header.startswith('Bearer '):
             return auth_header.split(' ')[1]  # Get the token part of the header
-        else:
-            # Fallback to checking the query parameters if no Authorization header or not a Bearer token
-            return request.args.get('token')
+        return None
     else:
         raise AppException("Does not have request context.")
 
 
-def get_websocket_auth_token() -> str | None:
-    """Get the token from the websocket query string.
-
-    Returns:
-        The token if present in the `token` query parameter, otherwise None.
-
-    Raises:
-        UnauthorisedException: If there is no active websocket context.
-        AppException: If the request does not have websocket context.
-    """
-    if not has_websocket_context():
-        raise AppException("Does not have websocket context.")
-
-    # Query string is bytes (e.g. b"token=abc&foo=bar"). Decode and parse.
-    query = websocket.query_string.decode("utf-8") if websocket.query_string else ""
-    if not query:
-        return None
-
-    params = {}
-    for part in query.split("&"):
-        if not part:
-            continue
-        key_value = part.split("=", 1)
-        if len(key_value) == 2:
-            key, value = key_value
-            params[key] = value
-    return params.get("token")
-
-
 def get_request_auth_token() -> str | None:
-    """Return auth token for the current context (HTTP or WebSocket).
+    """Return auth token for the current context (HTTP).
 
-    - If in HTTP request context, prefer Authorization: Bearer, then fallback to query param `token`.
-    - If in WebSocket context, read query param `token` from the connection string.
+    - If in HTTP request context use `Authorization: Bearer` header.
 
     Returns None if token is not present. Raises if no applicable context.
     """
     if has_request_context():
         return get_bearer_auth_token()
-    if has_websocket_context():
-        return get_websocket_auth_token()
-    raise AppException("Does not have request or websocket context.")
+    raise AppException("Does not have request context.")
 
 class PaginationQuery(BaseModel):
     """Common pagination and search query parameters.

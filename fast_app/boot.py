@@ -1,3 +1,4 @@
+import importlib
 from typing import Any, Dict, List, Type, Optional, TYPE_CHECKING
 
 import os
@@ -83,3 +84,32 @@ def boot(*,
         default_disk = storage_default_disk if storage_default_disk is not None else "local"
         Storage.configure(disks=disks, default_disk=default_disk)
 
+
+def boot_from_app_config():
+    app = Application()
+    if app.is_booted():
+        return
+
+    try:
+        spec = importlib.util.find_spec("app.app_config")
+    except ModuleNotFoundError:
+        spec = None
+    
+    if spec is None:
+        boot()
+        return
+
+    boot_params = {}
+    config_module = importlib.import_module("app.app_config")
+    variables = [
+        "autodiscovery", "events", "env_file_name", "storage_disks", "storage_default_disk", "storage_custom_drivers", "log_file_name"
+    ]
+    for variable in variables:
+        if hasattr(config_module, variable):
+            boot_params[variable] = getattr(config_module, variable)
+
+
+    boot(**boot_params)
+
+
+boot_from_app_config()

@@ -3,14 +3,8 @@ from typing import Optional
 
 import redis
 
-from fast_app.config import REDIS_DATABASE_CACHE_DB
 
-
-_redis = redis.Redis(
-    host=os.getenv("REDIS_HOST", "localhost"),
-    port=int(os.getenv("REDIS_PORT", 6379)),
-    db=REDIS_DATABASE_CACHE_DB,
-)
+_redis = redis.Redis.from_url(os.getenv("REDIS_DATABASE_CACHE_URL", "redis://localhost:6379/13"))
 
 
 def _version_key_for_collection(collection_name: str) -> str:

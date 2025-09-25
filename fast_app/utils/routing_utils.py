@@ -33,7 +33,7 @@ def apply_middleware_chain(handler: Callable, middlewares: list[Middleware | Typ
     return wrapped_handler
 
 def register_routes(app: Quart, routes: List['Route']) -> None:
-    """Register routes with the Quart application (HTTP and WebSocket)."""
+    """Register routes with the Quart application (HTTP only)."""
     # Flatten all routes
     flattened_routes = []
     for route in routes:
@@ -60,16 +60,11 @@ def register_routes(app: Quart, routes: List['Route']) -> None:
         # Apply middleware chain to the handler
         wrapped_handler = apply_middleware_chain(route.handler, all_middlewares)
         
-        # Register the route with Quart (HTTP vs WS)
-        if getattr(route, 'is_websocket', False):
-            # Register websocket via decorator-style API to avoid relying on private add_* APIs
-            app.websocket(route.path)(wrapped_handler)
-        else:
-            # Generate a unique endpoint per method+path to avoid collisions in tests
-            endpoint_name = f"{wrapped_handler.__name__}:{','.join(sorted(route.methods or []))}:{route.path}"
-            app.add_url_rule(
-                rule=route.path,
-                endpoint=endpoint_name,
-                view_func=wrapped_handler,
-                methods=route.methods
-            )
+        # Generate a unique endpoint per method+path to avoid collisions in tests
+        endpoint_name = f"{wrapped_handler.__name__}:{','.join(sorted(route.methods or []))}:{route.path}"
+        app.add_url_rule(
+            rule=route.path,
+            endpoint=endpoint_name,
+            view_func=wrapped_handler,
+            methods=route.methods
+        )

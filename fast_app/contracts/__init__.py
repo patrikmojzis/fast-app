@@ -16,7 +16,6 @@ from .policy import Policy
 from .resource import Resource
 from .route import Route
 from .storage_driver import StorageDriver
-from .websocket_event import WebsocketEvent
 from .command import Command
 from .room import Room
 from .seeder import Seeder
@@ -35,7 +34,6 @@ __all__ = [
     "Resource",
     "Route",
     "StorageDriver",
-    "WebsocketEvent",
     "Command",
     "Room",
     "Seeder",

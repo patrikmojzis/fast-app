@@ -28,4 +28,3 @@ class CommandBase(ABC):
         """Execute the command."""
         pass
 
-

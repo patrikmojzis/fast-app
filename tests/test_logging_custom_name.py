@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fast_app.app_provider import boot
+from fast_app.boot import boot
 from fast_app.utils.logging import get_log_file_path
 
 

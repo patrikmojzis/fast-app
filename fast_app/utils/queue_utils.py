@@ -6,27 +6,6 @@ from typing import Any, Callable
 import types
 
 
-def boot_if_needed(boot_args: dict[str, Any]) -> None:
-    if boot_args:
-        from fast_app.app_provider import boot
-        boot(**boot_args)
-
-
-def run_async_task(ctx: contextvars.Context, boot_args: dict[str, Any], func: Callable[..., Any], *args, **kwargs) -> Any:
-    """Run async function with preserved context and optional app boot."""
-    boot_if_needed(boot_args or {})
-
-    def run_in_context() -> Any:
-        return asyncio.run(func(*args, **kwargs))
-
-    return ctx.run(run_in_context)
-
-
-def run_sync_task(ctx: contextvars.Context, boot_args: dict[str, Any], func: Callable[..., Any], *args, **kwargs) -> Any:
-    """Run sync function with preserved context and optional app boot."""
-    boot_if_needed(boot_args or {})
-    return ctx.run(func, *args, **kwargs)
-
 
 def to_dotted_path(obj: Any) -> str:
     """Return dotted import path for a callable/class/function.

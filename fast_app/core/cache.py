@@ -5,13 +5,8 @@ from typing import Any, Awaitable, Callable, Optional, Union
 
 import redis.asyncio as redis
 
-from fast_app.config import REDIS_CACHE_DB
 
-r = redis.Redis(
-    host=os.getenv("REDIS_HOST", "localhost"),
-    port=int(os.getenv("REDIS_PORT", 6379)),
-    db=REDIS_CACHE_DB
-)
+r = redis.Redis.from_url(os.getenv("REDIS_CACHE_URL", "redis://localhost:6379/15"))
 
 class Cache:
     @classmethod

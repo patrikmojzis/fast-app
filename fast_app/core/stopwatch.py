@@ -1,3 +1,4 @@
+import logging
 import time
 
 
@@ -18,18 +19,18 @@ class Stopwatch:
             time.sleep(1)
     """
 
-    def __init__(self, logger=None):
+    def __init__(self, log=True):
         self.start_time = time.time()
         self.end_time = None
-        self.logger = logger
+        self.log = log
 
     def stop(self):
         self.end_time = time.time()
         elapsed = self.end_time - self.start_time
         print(f"Time taken: {elapsed:.2f}s")
 
-        if self.logger:
-            self.logger.info(f"Time taken: {elapsed:.2f}s")
+        if self.log:
+            logging.info(f"Time taken: {elapsed:.2f}s")
 
         return elapsed
 

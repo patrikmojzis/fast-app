@@ -9,11 +9,10 @@ from quart import g
 from fast_app import (
     Middleware,
     get_bearer_auth_token,
-    UnauthorisedException,
     decode_token,
     ACCESS_TOKEN_TYPE,
 )
-from fast_app.exceptions.auth_exceptions import AuthException
+from fast_app.exceptions import AuthException, UnauthorisedException
 
 
 class AuthMiddleware(Middleware):

@@ -34,7 +34,6 @@ from .contracts import (
     Resource,
     Route,
     StorageDriver,
-    WebsocketEvent,
     Command,
     Room,
     Seeder,
@@ -46,7 +45,6 @@ from .core import (
     validate_request,
     validate_query,
     get_bearer_auth_token,
-    get_websocket_auth_token,
     get_request_auth_token,
     list_paginated,
     search_paginated,
@@ -88,7 +86,6 @@ from .decorators import (
     singleton,
 )
 
-from .app_provider import boot
 
 __all__ = [
     # contracts
@@ -104,7 +101,6 @@ __all__ = [
     "Resource",
     "Route",
     "StorageDriver",
-    "WebsocketEvent",
     "Command",
     "Room",
     "Seeder",
@@ -115,7 +111,6 @@ __all__ = [
     "validate_request",
     "validate_query",
     "get_bearer_auth_token",
-    "get_websocket_auth_token",
     "get_request_auth_token",
     "list_paginated",
     "search_paginated",
@@ -156,6 +151,4 @@ __all__ = [
     "notifiable",
     "retry",
     "singleton",    
-    # app_provider
-    "boot",
 ]

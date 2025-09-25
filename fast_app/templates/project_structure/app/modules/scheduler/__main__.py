@@ -1,8 +1,7 @@
-from fast_app.app_provider import boot
-boot()
-
-from fast_app.core.scheduler import run_scheduler
 import asyncio
+
+import fast_app.boot
+from fast_app.core.scheduler import run_scheduler
 
 if __name__ == "__main__":
     asyncio.run(run_scheduler([

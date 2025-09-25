@@ -1,7 +1,7 @@
 import sys
 import pytest
 
-from fast_app.app_provider import boot
+from fast_app.boot import boot
 from fast_app.application import Application
 from fast_app.core.events import dispatch_now
 

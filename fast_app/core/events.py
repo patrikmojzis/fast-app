@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING
 
 from fast_app.core.queue import queue
@@ -7,7 +8,7 @@ if TYPE_CHECKING:
     from fast_app.contracts.event import Event
 
 
-def dispatch(event: 'Event') -> None:
+async def dispatch(event: 'Event') -> None:
     """
     Dispatch an event to all its registered listeners via background queue.
     
@@ -19,11 +20,11 @@ def dispatch(event: 'Event') -> None:
     if listeners is None:
         return
     
-    print(f"🚀 Dispatching {event_name} to {len(listeners)} listener(s)")
+    logging.debug(f"🚀 Dispatching {event_name} to {len(listeners)} listener(s)")
     
     # Queue each listener for background processing
     for listener_class in listeners:
-        queue(process_event_listener, listener_class, event)
+        await queue(process_event_listener, listener_class, event)
 
 
 async def dispatch_now(event: 'Event') -> None:
@@ -40,7 +41,7 @@ async def dispatch_now(event: 'Event') -> None:
     if listeners is None:
         return
     
-    print(f"⚡ Dispatching {event_name} immediately to {len(listeners)} listener(s)")
+    logging.debug(f"⚡ Dispatching {event_name} immediately to {len(listeners)} listener(s)")
     
     # Process each listener immediately
     for listener_class in listeners:

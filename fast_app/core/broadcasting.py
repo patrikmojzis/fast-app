@@ -14,8 +14,6 @@ from fast_app.decorators.deprecated_decorator import deprecated
 
 if TYPE_CHECKING:
     from fast_app.contracts.broadcast_event import BroadcastEvent
-    from fast_app.contracts.websocket_event import WebsocketEvent
-    from quart import Websocket
 
 
 async def broadcast(event: 'BroadcastEvent') -> bool:
@@ -37,7 +35,7 @@ async def broadcast(event: 'BroadcastEvent') -> bool:
     payload = await transform_broadcast_data(await event.broadcast_as())
     
     # Publish to Redis
-    redis_url = f"redis://{os.getenv("REDIS_HOST", "localhost")}:{os.getenv("REDIS_PORT", 6379)}/{os.getenv("REDIS_SOCKETIO_DB", 11)}"
+    redis_url = os.getenv("REDIS_SOCKETIO_URL", "redis://localhost:6379/14")
     mgr = socketio.AsyncRedisManager(redis_url)
     await asyncio.gather(*(mgr.emit(
         event.get_event_name(), 
