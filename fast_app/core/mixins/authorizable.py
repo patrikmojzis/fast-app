@@ -60,7 +60,7 @@ class Authorizable:
             return await policy_method(model_instance, self)
         else:
             # Class: pass user as first param only
-            return await policy_method(self)
+            return await policy_method(None, self)
     
     async def cannot(
         self, 

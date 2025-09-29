@@ -59,6 +59,6 @@ async def process_event_listener(listener_class: Type['EventListener'], event_in
         logging.debug(f"✅ Processed {listener_name} for {event_name}")
         
     except Exception as e:
-        logging.error(f"❌ Error processing {listener_name} for {event_name}: {e}")
+        logging.error(f"❌ Error processing {listener_name} for {event_name}: {e}", exc_info=True)
         # Re-raise to maintain error propagation
         raise

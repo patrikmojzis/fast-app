@@ -31,4 +31,4 @@ class BroadcastEvent(Event):
         """
         Modify how the event is broadcasted.
         """
-        return await self.model_dump()
+        return self.model_dump()
