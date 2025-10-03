@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Type, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, Mapping, Optional, Type, TYPE_CHECKING
 
 from fast_app.decorators.singleton_decorator import singleton
 
@@ -20,6 +20,7 @@ class Application:
         self._event_registry: Dict[Type['Event'], List[Type['EventListener']]] = {}
         self._are_events_configured = False
         self._boot_args: Dict[str, Any] = {}
+        self._serialisers: Dict[type[Any], Callable[[Any], Any]] = {}
     
     def configure_events(self, events: Dict[Type['Event'], List[Type['EventListener']]]) -> None:
         """
@@ -59,6 +60,22 @@ class Application:
         """Get the complete event registry."""
         return self._event_registry.copy()
     
+    def configure_serialisers(self, serialisers: Mapping[type[Any], Callable[[Any], Any]]) -> None:
+        """Configure custom serialisers provided by the user."""
+        self._serialisers = dict(serialisers)
+
+    def get_serialisers(self) -> Dict[type[Any], Callable[[Any], Any]]:
+        """Return a copy of registered custom serialisers."""
+        return self._serialisers.copy()
+
+    def get_serialiser_for_value(self, value: Any) -> Optional[Callable[[Any], Any]]:
+        """Find the most specific custom serialiser handling the provided value."""
+        value_type = type(value)
+        for serialiser_type, handler in self._serialisers.items():
+            if issubclass(value_type, serialiser_type):
+                return handler
+        return None
+
     def reset(self) -> None:
         """Reset the application state (useful for testing)."""
         self._event_registry.clear()

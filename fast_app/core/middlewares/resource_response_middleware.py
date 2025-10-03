@@ -1,9 +1,10 @@
 from typing import Any, Callable, Awaitable
 
-from quart import has_request_context
+from quart import Response, has_request_context, jsonify
 
 from fast_app.contracts.middleware import Middleware
 from fast_app.contracts.resource import Resource
+from fast_app.utils.serialisation import serialise
 
 
 class ResourceResponseMiddleware(Middleware):
@@ -16,8 +17,16 @@ class ResourceResponseMiddleware(Middleware):
 
     async def handle(self, next_handler: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:
         result = await next_handler(*args, **kwargs)
-        if has_request_context() and isinstance(result, Resource):
-            return await result.to_response()
+        if has_request_context():
+            if isinstance(result, Response):
+                return result
+            if isinstance(result, Resource):
+                return await result.to_response()
+            elif isinstance(result, (dict, list, str, int, float)):
+                return jsonify(serialise(result))
+            elif result is None:
+                return Response(status=204)          
+
         return result
 
 

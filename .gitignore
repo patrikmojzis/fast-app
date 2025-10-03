@@ -228,6 +228,7 @@ $RECYCLE.BIN/
 # MongoDB data
 data/
 logs/
+log/
 *.pid
 
 # Redis dumps
@@ -268,3 +269,7 @@ htmlcov/
 
 # Pre-commit
 .pre-commit-config.yaml.bak
+
+.cursor/
+.claude/
+TODO.md

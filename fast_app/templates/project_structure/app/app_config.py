@@ -1,7 +1,7 @@
 # Import `import fast_app.boot` on every fresh python entry point
 # as the first line to load this config to the app
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Type, Any
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Type
 
 if TYPE_CHECKING:
     from fast_app import Event
@@ -28,3 +28,6 @@ storage_custom_drivers: Optional[Dict[str, type]] = None
 
 # Rename where to capture logs for this app. Default: app.log
 log_file_name: Optional[str] = None
+
+# Register custom serialisers mapping class -> callables returning serialisable payloads
+serialisers: Optional[Dict[type[Any], Callable[[Any], Any]]] = None

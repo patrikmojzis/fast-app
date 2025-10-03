@@ -1,7 +1,7 @@
 from socketio.exceptions import ConnectionRefusedError
 from fast_app import (
     Middleware,
-    get_bearer_auth_token,
+    get_bearer_token,
     decode_token,
     ACCESS_TOKEN_TYPE,
 )

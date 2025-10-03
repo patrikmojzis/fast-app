@@ -58,7 +58,7 @@ async def test_routing_middleware_model_flow():
     client = app.test_client()
 
     resp = await client.get("/ping")
-    assert await resp.get_data(as_text=True) == "pong"
+    assert await resp.get_json() == "pong"
 
     resp = await client.post("/api/items", json={})
     assert resp.status_code == 422

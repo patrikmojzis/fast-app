@@ -54,6 +54,3 @@ class ThrottleMiddleware(Middleware):
 
         return f"throttle:{self.key}:{identifier_str}"
 
-    # No custom increment; rely on Redis integer counters.
-
-

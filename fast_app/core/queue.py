@@ -11,8 +11,7 @@ async def queue(func: Callable[..., Any], *args, **kwargs) -> None:
     if driver == "sync":
         logging.debug("[QUEUE] Executing function sync")
         if inspect.iscoroutinefunction(func):
-            # asyncio.create_task(func(*args, **kwargs))
-            await func(*args, **kwargs)
+            asyncio.create_task(func(*args, **kwargs))
         else:
             func(*args, **kwargs)
         return

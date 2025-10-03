@@ -1,0 +1,34 @@
+site_name: Fast App Docs
+docs_dir: docs
+nav:
+  - Getting Started:
+      - Installation: installation.md
+      - Quick Start: quick_start.md
+  - Basic API:
+      - Routes: routes.md
+      - Models: models.md
+      - Schemas: schemas.md
+      - Observers: observers.md
+      - Policies: policies.md
+      - Resources: resources.md
+      - Controller: controller.md
+  - WebSockets:
+      - Broadcasting: broadcasting.md
+      - Rooms: rooms.md
+      - Broadcast Events: broadcast_events.md
+  - Digging deeper:
+      - Context: context.md
+      - Environment: enviroment.md
+      - API: api.md
+      - CLI: cli.md
+      - Queue: queue.md
+      - Scheduler: scheduler.md
+      - Async Farm: async_farm.md
+      - Events: events.md
+      - Localization: localization.md
+      - Storage: storage.md
+      - Notifications: notifications.md
+      - Integrations: integrations.md
+theme:
+  name: material
+

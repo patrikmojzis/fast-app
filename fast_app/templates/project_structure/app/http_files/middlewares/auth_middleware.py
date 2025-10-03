@@ -8,7 +8,7 @@ from quart import g
 
 from fast_app import (
     Middleware,
-    get_bearer_auth_token,
+    get_bearer_token,
     decode_token,
     ACCESS_TOKEN_TYPE,
 )
@@ -20,7 +20,7 @@ class AuthMiddleware(Middleware):
 
     async def handle(self, next_handler: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:
         # Get bearer token from request header
-        token = get_bearer_auth_token()
+        token = get_bearer_token()
         if not token:
             raise UnauthorisedException()
 

@@ -1,9 +1,10 @@
 import asyncio
-from typing import Optional, Literal, Union, TypeVar
+from collections.abc import Mapping
+from typing import Any, Optional, Literal, TypeVar
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError, BaseModel, Field
-from quart import request, has_request_context, jsonify, g
+from quart import request, has_request_context, g
 
 from fast_app.exceptions.common_exceptions import AppException
 from fast_validation import ValidationRuleException, Schema
@@ -21,6 +22,17 @@ if TYPE_CHECKING:
     from fast_app.contracts.resource import Resource
 
 S = TypeVar("S", bound=BaseModel)
+FilterInput = BaseModel | Mapping[str, Any]
+
+
+def _normalize_filter(filter_input: FilterInput | None) -> dict[str, Any]:
+    if filter_input is None:
+        return {}
+    if isinstance(filter_input, BaseModel):
+        return filter_input.model_dump(exclude_unset=True)
+    if isinstance(filter_input, Mapping):
+        return dict(filter_input)
+    raise TypeError("filter must be a mapping or a Pydantic model.")
 
 def get_client_ip() -> str:
     """Get the client IP address from the request.
@@ -42,7 +54,7 @@ def get_client_ip() -> str:
         ip = request.remote_addr
     return ip
 
-def get_bearer_auth_token() -> str | None:
+def get_bearer_token() -> str | None:
     """Get the token from the request.
     
     Returns:
@@ -61,92 +73,85 @@ def get_bearer_auth_token() -> str | None:
     else:
         raise AppException("Does not have request context.")
 
-
-def get_request_auth_token() -> str | None:
-    """Return auth token for the current context (HTTP).
-
-    - If in HTTP request context use `Authorization: Bearer` header.
-
-    Returns None if token is not present. Raises if no applicable context.
+class ListQuery(BaseModel):
     """
-    if has_request_context():
-        return get_bearer_auth_token()
-    raise AppException("Does not have request context.")
-
-class PaginationQuery(BaseModel):
-    """Common pagination and search query parameters.
+    Common pagination and search query parameters.
 
     Designed for validating typical list endpoints.
     """
 
     page: int = Field(1, ge=1)
     per_page: int = Field(10, ge=1)
-    search: Optional[str] = Field(None)
     sort_by: Optional[str] = Field(None)
     sort_direction: Optional[Literal["asc", "desc"]] = Field(None)
 
 
-async def search_paginated(model: 'Model', resource: 'Resource', *, query_param: dict | None = None) -> 'Response':
-    if query_param is None:
-        query_param = {}
+class SearchQuery(ListQuery):
+    search: str = Field(...)
 
-    params = await validate_query(PaginationQuery)
-    page = params.page
-    per_page = params.per_page
-    search = params.search
-    sort_by = params.sort_by
-    sort_direction = params.sort_direction
 
-    # Build sort query
-    if sort_by and sort_direction:
-        sort = [(sort_by, 1 if sort_direction == "asc" else -1)]  # user requested sort
-    else:
-        sort = g.get('sort', [('_id', -1)])  # sort modified internally or default sort
+def _build_sort_query(list_query: ListQuery, default_sort: Optional[list[tuple[str, int]]] = None) -> list[tuple[str, int]]:
+    # User requested sort
+    if list_query.sort_by and list_query.sort_direction:
+        return [(list_query.sort_by, 1 if list_query.sort_direction == "asc" else -1)]
+    
+    # Sort modified internally
+    if default_sort is not None:
+        return default_sort
+    
+    # Fallback sort
+    return [('_id', -1)]
 
-    search_filter = build_search_query_from_string(search, model.all_fields())
-    if query_param:
-        search_filter = {"$and": [query_param, search_filter]}
 
-    res = await model.search(search_filter, per_page, (page - 1) * per_page, sort=sort)
-    return jsonify({
+async def search_paginated(model: 'Model', resource: 'Resource', *, filter: FilterInput | None = None, sort: Optional[list[tuple[str, int]]] = None) -> dict:
+    base_filter = _normalize_filter(filter)
+
+    params = await validate_query(SearchQuery)
+
+    search_filter = build_search_query_from_string(params.search, model.all_fields())
+    if base_filter:
+        search_filter = {"$and": [base_filter, search_filter]}
+
+    sort = _build_sort_query(params, sort)
+    skip = (params.page - 1) * params.per_page
+    res = await model.search(search_filter, params.per_page, skip, sort=sort)
+
+    return {
         "meta": res["meta"],
         "data": await resource(res["data"]).dump(),
-    })
+    }
 
+async def list_paginated(model: 'Model', resource: 'Resource', *, filter: FilterInput | None = None, sort: Optional[list[tuple[str, int]]] = None) -> dict:
+    base_filter = _normalize_filter(filter)
 
-async def list_paginated(model: 'Model', resource: 'Resource', *, query_param: dict | None = None) -> 'Response':
-    if query_param is None:
-        query_param = {}
-
-    params = await validate_query(PaginationQuery)
-    page = params.page
-    per_page = params.per_page
-    sort_by = params.sort_by
-    sort_direction = params.sort_direction
-
-    # Build sort query
-    if sort_by and sort_direction:
-        sort = [(sort_by, 1 if sort_direction == "asc" else -1)]  # user requested sort
-    else:
-        sort = g.get('sort', [('_id', -1)])  # sort modified internally or default sort
+    params = await validate_query(ListQuery)
+    
+    sort = _build_sort_query(params, sort)
+    skip = (params.page - 1) * params.per_page
 
     # Get total records and results at once
     total_records, result = await asyncio.gather(
-        model.count(query_param),
-        model.find(query_param, limit=per_page, skip=(page - 1) * per_page, sort=sort),
+        model.count(base_filter),
+        model.find(base_filter, limit=params.per_page, skip=skip, sort=sort),
     )
 
-    total_pages = total_records // per_page + (1 if total_records % per_page else 0)
-
-    return jsonify({
+    return {
         'meta': {
-            'current_page': page,
-            'per_page': per_page,
-            'last_page': total_pages,
+            'displaying': len(result),
+            'skip': skip,
+            'current_page': params.page,
+            'per_page': params.per_page,
+            'last_page': total_records // params.per_page + (1 if total_records % params.per_page else 0),
             'total': total_records,
         },
         'data': await resource(result).dump(),
-    })
+    }
+
+async def paginate(model: 'Model', resource: 'Resource', *, filter: FilterInput | None = None, sort: Optional[list[tuple[str, int]]] = None) -> 'Response':
+    if request.args.get('search'):
+        return await search_paginated(model, resource, filter=filter, sort=sort)
+    else:
+        return await list_paginated(model, resource, filter=filter, sort=sort)
 
 def _sanitize_pydantic_errors(errors: list[dict]) -> list[dict]:
     """Return a minimal, JSON-safe error payload.

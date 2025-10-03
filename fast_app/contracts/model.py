@@ -35,6 +35,7 @@ class Model():
     _cached_all_fields: ClassVar[Optional[list[str]]] = None
 
     search_relations: ClassVar[list[dict[str, str]]] = []  # Example: [{"field": "user_id", "model": "User", "search_fields": ["name"]}]
+    search_fields: ClassVar[Optional[list[str]]] = None
 
     _id: Optional[ObjectId] = None
     created_at: Optional[datetime] = None
@@ -110,7 +111,7 @@ class Model():
                     if get_origin(hint) is ClassVar:
                         continue
 
-                    if name in ("protected", "policy", "search_relations"):  # May be redundant
+                    if name in ("protected", "policy", "search_relations", "search_fields"):  # May be redundant
                         continue
                     annotations[name] = hint
 
@@ -130,6 +131,12 @@ class Model():
             return cls._cached_all_fields
         cls._cached_all_fields = [key for key in cls.model_fields().keys()]
         return cls._cached_all_fields
+
+    @classmethod
+    def searchable_fields(cls) -> list[str]:
+        if cls.search_fields:
+            return cls.search_fields
+        return cls.all_fields()
 
     async def _notify_observer(self, hook: str) -> None:
         for observer in self.observers:
@@ -212,10 +219,12 @@ class Model():
         Search for records in the current collection and related collections.
         """
         # Convert query to string if it's an int or ObjectId
+        search_fields = cls.searchable_fields()
+
         if isinstance(query, int):
             query = str(query)
         elif isinstance(query, ObjectId):
-            query = {"$or": [{key: query} for key in cls.all_fields()]}
+            query = {"$or": [{key: query} for key in search_fields]}
             
         current_collection = cls.collection_name()
         
@@ -230,7 +239,7 @@ class Model():
             "$match": {
                 "$and": [
                     base_query,
-                    build_search_query_from_string(query, cls.all_fields()) if isinstance(query, str) else query # Build query from string or use custom
+                    build_search_query_from_string(query, search_fields) if isinstance(query, str) else query # Build query from string or use custom
                 ]
             }
         }
@@ -242,7 +251,9 @@ class Model():
             for relation in cls.search_relations:
                 related_model_name = relation["model"].lower()
                 foreign_key = relation["field"]
-                search_fields = relation["search_fields"]
+                relation_fields = [field for field in relation.get("search_fields", []) if field]
+                if not relation_fields:
+                    continue
                                 
                 # Add unionWith to include related matches
                 pipeline.append({
@@ -253,7 +264,7 @@ class Model():
                             {"$match": {
                                 "$and": [
                                     await cls.query_modifier({}, "search", related_model_name),
-                                    build_search_query_from_string(query, search_fields)
+                                    build_search_query_from_string(query, relation_fields)
                                 ]
                             }},
                             # Look up records in the current collection that reference these matches
@@ -323,7 +334,6 @@ class Model():
             "meta": {
                 "total": total,
                 "displaying": len(data),
-                "limit": limit,
                 "skip": skip,
                 "current_page": skip // limit + 1,
                 "per_page": limit,

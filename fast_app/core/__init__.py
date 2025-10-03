@@ -8,10 +8,10 @@ from .api import (
     get_mongo_filter_from_query,
     validate_request,
     validate_query,
-    get_bearer_auth_token,
-    get_request_auth_token,
+    get_bearer_token,
     list_paginated,
     search_paginated,
+    paginate
 )
 from .broadcasting import broadcast
 from .events import dispatch, dispatch_now
@@ -38,10 +38,10 @@ __all__ = [
     "get_mongo_filter_from_query",
     "validate_request",
     "validate_query",
-    "get_bearer_auth_token",
-    "get_request_auth_token",
+    "get_bearer_token",
     "list_paginated",
     "search_paginated",
+    "paginate",
     # broadcasting/events
     "broadcast",
     "dispatch",

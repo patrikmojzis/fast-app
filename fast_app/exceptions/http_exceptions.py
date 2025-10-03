@@ -70,3 +70,10 @@ class NotFoundException(HttpException):
             status_code=404,
             **kwargs
         )
+
+class BadRequestException(HttpException):
+    def __init__(self, **kwargs):
+        super().__init__(
+            status_code=400,
+            **kwargs
+        )

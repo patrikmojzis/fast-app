@@ -1,5 +1,5 @@
 import importlib
-from typing import Any, Dict, List, Type, Optional, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, Type, Optional, TYPE_CHECKING
 
 import os
 import sys
@@ -23,6 +23,7 @@ def boot(*,
     storage_disks: Optional[Dict[str, Dict[str, Any]]] = None,
     storage_default_disk: Optional[str] = None,
     storage_custom_drivers: Optional[Dict[str, type]] = None,
+    serialisers: Optional[Dict[type[Any], Callable[[Any], Any]]] = None,
     log_file_name: Optional[str] = None,
 ):
     """
@@ -52,11 +53,15 @@ def boot(*,
         env_file_name=env_file_name,
         storage_disks=storage_disks,
         storage_default_disk=storage_default_disk,
+        serialisers=serialisers,
     )
     
     configure_env(env_file_name)
     setup_logging(log_file_name)
     
+    if serialisers is not None:
+        app.configure_serialisers(serialisers)
+
     # Autodiscover and register observers and policies to models
     if autodiscovery:
         autodiscover_models()
@@ -102,7 +107,7 @@ def boot_from_app_config():
     boot_params = {}
     config_module = importlib.import_module("app.app_config")
     variables = [
-        "autodiscovery", "events", "env_file_name", "storage_disks", "storage_default_disk", "storage_custom_drivers", "log_file_name"
+        "autodiscovery", "events", "env_file_name", "storage_disks", "storage_default_disk", "storage_custom_drivers", "log_file_name", "serialisers"
     ]
     for variable in variables:
         if hasattr(config_module, variable):

@@ -1,8 +1,20 @@
 import re
 from datetime import datetime
-from typing import Any
+from functools import lru_cache
+from typing import Any, TYPE_CHECKING
 
 from bson import ObjectId
+
+if TYPE_CHECKING:
+    from fast_app.application import Application
+
+
+@lru_cache(maxsize=1)
+def _get_application() -> "Application":
+    """Prevent circular imports."""
+    from fast_app.application import Application
+
+    return Application()
 
 
 def serialise(val):
@@ -10,6 +22,9 @@ def serialise(val):
         return str(val)
     if isinstance(val, datetime):
         return val.isoformat()
+    app = _get_application()
+    if custom := app.get_serialiser_for_value(val):
+        return custom(val)
     # insert serialisation here <start>
 
     # insert serialisation here <end>
@@ -20,6 +35,16 @@ def serialise(val):
 
     return val
 
+
+
+def to_snake_case(value: str) -> str:
+    cleaned = value.strip()
+    if not cleaned:
+        return ""
+    interim = re.sub(r"(?<!^)(?=[A-Z])", "_", cleaned)
+    interim = re.sub(r"[\s\-]+", "_", interim)
+    interim = re.sub(r"[^0-9a-zA-Z_]+", "_", interim)
+    return interim.strip("_").lower()
 
 
 def pascal_case_to_snake_case(pascal: type | str) -> str:
