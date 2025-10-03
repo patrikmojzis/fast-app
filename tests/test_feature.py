@@ -1,7 +1,7 @@
 import os
 import pytest
 from quart import Quart, jsonify, g
-from pydantic import BaseModel
+from fast_validation import Schema
 
 from fast_app import Route, Middleware, Model, validate_request
 from fast_app.utils.routing_utils import register_routes
@@ -14,7 +14,7 @@ class Item(Model):
     name: str
 
 
-class ItemSchema(BaseModel):
+class ItemSchema(Schema):
     name: str
 
 
@@ -58,7 +58,7 @@ async def test_routing_middleware_model_flow():
     client = app.test_client()
 
     resp = await client.get("/ping")
-    assert await resp.get_data(as_text=True) == "pong"
+    assert await resp.get_json() == "pong"
 
     resp = await client.post("/api/items", json={})
     assert resp.status_code == 422

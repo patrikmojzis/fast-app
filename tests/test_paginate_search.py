@@ -1,8 +1,8 @@
 import pytest
 from quart import Quart
 
-from fast_app.core.simple_controller import simple_index
 from fast_app.utils.model_utils import build_search_query_from_string
+from fast_app.core.api import list_paginated, search_paginated
 
 
 class DummyResource:
@@ -47,8 +47,7 @@ async def test_simple_index_pagination_and_search():
         DummyModel.search_called_with = None
         DummyModel.count_called_with = None
         DummyModel.find_called_with = None
-        response = await simple_index(DummyModel, DummyResource, extended_query={"active": True})
-        await response.get_json()
+        response = await list_paginated(DummyModel, DummyResource, filter={"active": True})
         assert DummyModel.count_called_with == {"active": True}
         assert DummyModel.find_called_with == {"active": True}
         assert DummyModel.search_called_with is None
@@ -56,8 +55,7 @@ async def test_simple_index_pagination_and_search():
     # Search with query
     async with app.test_request_context("/?search=foo"):
         DummyModel.search_called_with = None
-        response = await simple_index(DummyModel, DummyResource, extended_query={"active": True})
-        await response.get_json()
+        response = await search_paginated(DummyModel, DummyResource, filter={"active": True})
         expected = {
             "$and": [
                 {"active": True},

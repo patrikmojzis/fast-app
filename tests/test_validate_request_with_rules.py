@@ -3,7 +3,7 @@ from quart import Quart, jsonify, g
 from pydantic import BaseModel
 
 from fast_app import Route, validate_request
-from fast_app.core import Schema
+from fast_validation import Schema
 from fast_app.core.validation_rules.exists_validator_rule import ExistsValidatorRule
 from fast_app.utils.routing_utils import register_routes
 

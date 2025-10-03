@@ -7,6 +7,9 @@ from fast_app.utils.file_utils import copy_tree
 from .command_base import CommandBase
 
 
+TEMPLATES_PATH = Path(__file__).parent.parent / "templates"
+
+
 class InitCommand(CommandBase):
     """Command to initialize a new FastApp project."""
     
@@ -21,7 +24,7 @@ class InitCommand(CommandBase):
     def execute(self, args: argparse.Namespace) -> None:
         """Initialize project in current directory."""
         destination = Path.cwd()
-        source = self.template_path / "project_structure"
+        source = TEMPLATES_PATH / "project_structure"
         
         if not source.exists():
             print(f"❌ Template not found: {source}")
@@ -36,7 +39,6 @@ class InitCommand(CommandBase):
         """Display next steps for user."""
         print("\n🎉 Project created successfully!")
         print("\n📋 Next steps:")
-        print("1. python -m venv .venv")
-        print("2. source .venv/bin/activate")
-        print("3. pip install -e .")
-        print("4. Start developing!")
+        print("1. cp .env.example .env")
+        print("2. fast-app serve")
+        print("3. Start developing!")

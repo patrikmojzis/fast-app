@@ -5,13 +5,8 @@ from typing import Any, Awaitable, Callable, Optional, Union
 
 import redis.asyncio as redis
 
-from fast_app.config import REDIS_CACHE_DB
 
-r = redis.Redis(
-    host=os.getenv("REDIS_HOST", "localhost"),
-    port=int(os.getenv("REDIS_PORT", 6379)),
-    db=REDIS_CACHE_DB
-)
+r = redis.Redis.from_url(os.getenv("REDIS_CACHE_URL", "redis://localhost:6379/15"))
 
 class Cache:
     @classmethod
@@ -57,26 +52,6 @@ class Cache:
         :return: True if the key exists, False otherwise.
         """
         return await r.exists(key) > 0
-
-    @classmethod
-    async def increment(cls, key: str, amount: int = 1):
-        """
-        Increment a numeric value in the cache.
-        :param key: The cache key.
-        :param amount: The amount to increment by.
-        :return: The new value.
-        """
-        return await r.incr(key, amount)
-
-    @classmethod
-    async def decrement(cls, key: str, amount: int = 1):
-        """
-        Decrement a numeric value in the cache.
-        :param key: The cache key.
-        :param amount: The amount to decrement by.
-        :return: The new value.
-        """
-        return await r.decr(key, amount)
 
     @classmethod
     async def remember(cls, key: str, callback: Union[Callable[[], Any], Callable[[], Awaitable[Any]]], expire_in_m: Optional[int] = None):

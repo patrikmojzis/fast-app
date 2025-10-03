@@ -4,8 +4,7 @@ from typing import Any, Sequence
 
 from bson import ObjectId
 
-from fast_app.contracts.validator_rule import ValidatorRule
-from fast_app.exceptions.common_exceptions import ValidationRuleException
+from fast_validation import ValidatorRule, ValidationRuleException
 
 
 class ExistsValidatorRule(ValidatorRule):

@@ -7,5 +7,8 @@ if TYPE_CHECKING:
 
 
 class NewClass(Notification):
+    def __init__(self, *args, **kwargs):
+        pass
+
     def via(self, notifiable: 'Model') -> list['NotificationChannel']:
         return []

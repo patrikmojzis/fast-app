@@ -1,22 +1,16 @@
+import logging
 import os
-
+from typing import Optional
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
-from pymongo import monitoring
+from fast_app.exceptions import EnvMissingException
+from fast_app.utils.mongo_utils import (
+    DatabaseCacheFlusher,
+    maybe_start_change_stream_watcher,
+    stop_change_stream_watcher,
+)
 
-from fast_app.utils.database_cache import DatabaseCache
-
-mongo: AsyncIOMotorClient = None
-db: AsyncIOMotorDatabase = None
-
-
-class DatabaseCacheFlusher(monitoring.CommandListener):
-    """
-    Flushes the DatabaseCache when a command is executed.
-    """
-
-    def started(self, event):
-        if event.command_name in ["insert", "update", "delete", "create", "findAndModify", "drop", "dropDatabase", "renameCollection"]:
-            DatabaseCache.flush()
+mongo: Optional[AsyncIOMotorClient] = None
+db: Optional[AsyncIOMotorDatabase] = None
 
 async def setup_mongo():
     global mongo, db
@@ -24,18 +18,16 @@ async def setup_mongo():
     db_name = os.getenv('DB_NAME', 'db') if not os.getenv('TEST_ENV') else os.getenv('TEST_DB_NAME', 'test_db')
 
     if not os.getenv('MONGO_URI'):
-        raise ValueError("Set environment variable `MONGO_URI`")
+        raise EnvMissingException("MONGO_URI")
         
-    # Connect to MongoDB
-    mongo = AsyncIOMotorClient(os.getenv('MONGO_URI'))
+    # Connect to MongoDB with DatabaseCacheFlusher attached
+    mongo = AsyncIOMotorClient(os.getenv('MONGO_URI'), event_listeners=[DatabaseCacheFlusher()])
     db = mongo[db_name]
 
-    # Register the command logger
-    monitoring.register(DatabaseCacheFlusher())
+    logging.debug(f"Connected to MongoDB database: {db_name}")
 
-    # Test the connection
-    await mongo.admin.command('ping')
-    print(f"Connected to MongoDB database: {db_name}")
+    # Optionally start DB change streams watcher for cross-process cache invalidation
+    await maybe_start_change_stream_watcher(db)
 
 
 async def get_mongo():
@@ -54,5 +46,7 @@ async def get_db():
 
 async def clear():
     global mongo, db
+    await stop_change_stream_watcher()
     mongo = None
     db = None
+

@@ -18,10 +18,10 @@ Usage:
 """
 
 import json
-from contextvars import ContextVar
 from pathlib import Path
 from typing import Dict, Any, Optional
 import os
+from fast_app.core.context import define_key, context
 
 # Module state - elegant simplicity
 _translations: Dict[str, Dict[str, Any]] = {}
@@ -29,7 +29,7 @@ _translations: Dict[str, Dict[str, Any]] = {}
 _LOCALE_DEFAULT = os.getenv('LOCALE_DEFAULT', 'en')
 _LOCALE_FALLBACK = os.getenv('LOCALE_FALLBACK', 'en')
 _LOCALE_PATH = os.getenv('LOCALE_PATH', os.path.join(os.getcwd(), 'lang'))
-_current_locale: ContextVar[str] = ContextVar('locale', default=_LOCALE_DEFAULT)
+_LocaleKey = define_key[str]("locale", default=_LOCALE_DEFAULT, require_picklable=True)
 
 
 def _get_nested(data: Dict[str, Any], key: str) -> Optional[str]:
@@ -77,7 +77,7 @@ def __(key: str, parameters: Optional[Dict[str, Any]] = None,
         __('missing', default='Not found')         # With fallback
         __('title', locale='es')                   # Force locale
     """
-    current_locale = locale or _current_locale.get()
+    current_locale = locale or context.get(_LocaleKey, _LOCALE_DEFAULT)
     
     # Try current locale first
     translation = _get_nested(_load_locale(current_locale), key)
@@ -102,12 +102,12 @@ def __(key: str, parameters: Optional[Dict[str, Any]] = None,
 
 def set_locale(locale: str) -> None:
     """Set the current locale. Simple, direct, effective."""
-    _current_locale.set(locale)
+    context.set(_LocaleKey, locale)
 
 
 def get_locale() -> str:
     """Get the current locale. Pure simplicity."""
-    return _current_locale.get()
+    return context.get(_LocaleKey, _LOCALE_DEFAULT)
 
 
 def clear_cache() -> None:

@@ -12,7 +12,7 @@ async def test_dispatch_event():
 
     class Ponger(EventListener):
         called = False
-        async def handle(self):
+        async def handle(self, event):
             Ponger.called = True
 
     app = Application()

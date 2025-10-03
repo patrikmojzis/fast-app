@@ -2,7 +2,7 @@ import pytest
 from quart import Quart, jsonify, g
 
 from fast_app import Route
-from fast_app.core import Schema
+from fast_validation import Schema
 from fast_app.core.validation_rules.exists_validator_rule import ExistsValidatorRule
 from fast_app.core.api import validate_query
 from fast_app.utils.routing_utils import register_routes
@@ -28,7 +28,7 @@ class QueryWithRules(Schema):
 
 async def read_items():
     params = await validate_query(QueryWithRules)
-    return jsonify(params)
+    return jsonify(params.model_dump())
 
 
 @pytest.mark.asyncio

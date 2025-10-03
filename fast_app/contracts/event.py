@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from fast_app.utils.serialisation import pascal_case_to_snake_case
+from fast_app.utils.serialisation import pascal_case_to_snake_case, remove_suffix
 
 
 class Event(BaseModel):
@@ -10,6 +10,7 @@ class Event(BaseModel):
     """
     model_config = {"arbitrary_types_allowed": True}
     
-    def get_event_type(self) -> str:
+    def get_event_name(self) -> str:
         """Get the event type for identification purposes."""
-        return pascal_case_to_snake_case(self.__class__.__name__).rstrip("_event")
+        name = pascal_case_to_snake_case(self.__class__.__name__)
+        return remove_suffix(name, "_event")

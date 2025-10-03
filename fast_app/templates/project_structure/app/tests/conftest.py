@@ -1,16 +1,15 @@
-from fast_app.app_provider import boot
-boot()
-
 import os
 
 import pytest_asyncio
 
-from app.modules.api import create_app
+import fast_app.boot
+
+from app.modules.asgi.quart import create_quart_app
 
 
 @pytest_asyncio.fixture(scope="function")
 async def app():
-    quart_app = create_app()
+    quart_app = create_quart_app()
     quart_app.config['TESTING'] = True
     yield quart_app
 
@@ -18,15 +17,23 @@ async def app():
 @pytest_asyncio.fixture(scope='function', autouse=True)
 async def setup_session():
     # Reset MongoDB global variables to avoid event loop issues
-    import fast_app.database.mongo
-    fast_app.database.mongo.clear()
+    # FastApp imports
+    from fast_app.database import clear
+    await clear()
 
-    # Clear caches
-    from fast_app.utils.database_cache import DatabaseCache
-    DatabaseCache.flush()
+    # Clear caches (best-effort in tests; ignore if Redis not available)
+    try:
+        from fast_app.utils.versioned_cache import _redis
+        _redis.flushdb()
+    except Exception:
+        pass
 
-    from fast_app.core.cache import Cache
-    Cache.flush()
+    try:
+        # FastApp imports
+        from fast_app.core.cache import Cache
+        await Cache.flush()
+    except Exception:
+        pass
 
     yield
     
@@ -34,6 +41,7 @@ async def setup_session():
 async def drop_db():
     if db := os.getenv('TEST_DB_NAME'):
         # Create a fresh MongoDB connection for this operation to avoid event loop issues
+        # Third party
         from motor.motor_asyncio import AsyncIOMotorClient
         
         if not os.getenv('MONGO_URI'):

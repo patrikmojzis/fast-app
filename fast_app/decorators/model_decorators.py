@@ -68,7 +68,7 @@ def authorizable(model_cls: Type[T]) -> Type[T]:
     return new_class
 
 
-def routes_notifications(model_cls: Type[T]) -> Type[T]:
+def notifiable(model_cls: Type[T]) -> Type[T]:
     """Decorator that adds RoutesNotifications as a parent class to the model."""
     # Check if RoutesNotifications is already in the MRO to avoid duplicate inheritance
     if RoutesNotifications in model_cls.__mro__:

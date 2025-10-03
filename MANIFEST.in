@@ -4,6 +4,8 @@ include pyproject.toml
 recursive-include fast_app *.py
 include fast_app/py.typed
 recursive-include fast_app/templates *
+prune docs
+prune .github
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 recursive-exclude * *.pyo

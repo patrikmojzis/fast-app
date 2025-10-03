@@ -8,12 +8,11 @@ from quart import g
 
 from fast_app import (
     Middleware,
-    get_bearer_auth_token,
-    UnauthorisedException,
+    get_bearer_token,
     decode_token,
     ACCESS_TOKEN_TYPE,
 )
-from fast_app.exceptions.auth_exceptions import AuthException
+from fast_app.exceptions import AuthException, UnauthorisedException
 
 
 class AuthMiddleware(Middleware):
@@ -21,7 +20,7 @@ class AuthMiddleware(Middleware):
 
     async def handle(self, next_handler: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:
         # Get bearer token from request header
-        token = get_bearer_auth_token()
+        token = get_bearer_token()
         if not token:
             raise UnauthorisedException()
 
@@ -42,7 +41,7 @@ class AuthMiddleware(Middleware):
             raise UnauthorisedException()
             
         # Update last seen timestamp
-        await asyncio.gather(
+        user, auth = await asyncio.gather(
             user.update({'last_seen_at': datetime.now()}),
             auth.update({'last_used_at': datetime.now()}),
         )

@@ -11,13 +11,13 @@ A FastApp project - Python framework for rapid application development.
 
 2. **Set up environment:**
    ```bash
-   cp env.debug.example .env.debug
+   cp env.example .env
    # Edit .env with your configuration
    ```
 
 3. **Run the application:**
    ```bash
-   fast-app run api
+   fast-app serve
    ```
 
 ## Development

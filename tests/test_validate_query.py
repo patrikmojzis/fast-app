@@ -14,7 +14,7 @@ class QuerySchema(BaseModel):
 
 async def read_items():
     params = await validate_query(QuerySchema)
-    return jsonify(params)
+    return jsonify(params.model_dump())
 
 
 @pytest.mark.asyncio

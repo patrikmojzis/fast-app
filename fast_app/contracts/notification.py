@@ -14,6 +14,6 @@ class Notification(ABC):
 
     async def send(self, notifiable: 'Model'):
         for channel in self.via(notifiable):
-            queue(channel.send, notifiable, self)
+            await queue(channel.send, notifiable, self)
 
 

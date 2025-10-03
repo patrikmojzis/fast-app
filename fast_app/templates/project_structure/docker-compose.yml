@@ -1,18 +1,34 @@
 services:
-  # Web application (API and WebSocket)
-  api:
+  # Web application (API and SocketIO)
+  asgi:
     build: .
-    container_name: "${APP_NAME:-fast_app}-api"
+    container_name: "${APP_NAME:-fast_app}-asgi"
     ports:
-      - "${MAP_API_PORT:-8000}:8000"
-    env_file:
-      - .env.docker
-    environment:
-      - REDIS_HOST=redis
+      - "${MAP_ASGI_PORT:-8000}:8000"
     depends_on:
       redis:
         condition: service_healthy
-    command: ["hypercorn", "app.modules.api:app", "--bind", "0.0.0.0:8000"]
+      rabbitmq:
+        condition: service_healthy
+    command: ["hypercorn", "app.modules.asgi.app:app", "--bind", "0.0.0.0:8000"]
+    restart: unless-stopped 
+    volumes:
+      - ./log:/app/log
+      - ./storage/local:/app/storage/local
+      - ./storage/public:/app/storage/public
+    networks:
+      - ${APP_NAME:-fast_app}
+
+  # Scheduler Service
+  scheduler:
+    build: .
+    container_name: "${APP_NAME:-fast_app}-scheduler"
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: ["python", "-m", "app.modules.scheduler"]
     restart: unless-stopped
     volumes:
       - ./log:/app/log
@@ -21,38 +37,16 @@ services:
     networks:
       - ${APP_NAME:-fast_app}
 
-  # RQ Worker with Scheduler
-  rq-worker:
+  # Async farm
+  async_farm:
     build: .
-    container_name: "${APP_NAME:-fast_app}-rq-worker"
-    env_file:
-      - .env.docker
-    environment:
-      - REDIS_HOST=redis
+    container_name: "${APP_NAME:-fast_app}-async_farm"
     depends_on:
       redis:
         condition: service_healthy
-    command: ["/app/scripts/start-rq-worker.sh"]
-    restart: unless-stopped
-    volumes:
-      - ./log:/app/log
-      - ./storage/local:/app/storage/local
-      - ./storage/public:/app/storage/public
-    networks:
-      - ${APP_NAME:-fast_app}
-
-  # Cron Service
-  cron:
-    build: .
-    container_name: "${APP_NAME:-fast_app}-cron"
-    env_file:
-      - .env.docker
-    environment:
-      - REDIS_HOST=redis
-    depends_on:
-      redis:
+      rabbitmq:
         condition: service_healthy
-    command: ["python", "-m", "app.modules.cron"]
+    command: ["fast-app", "work"]
     restart: unless-stopped
     volumes:
       - ./log:/app/log
@@ -79,8 +73,30 @@ services:
       timeout: 5s
       retries: 3
 
+  # RabbitMQ 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: "${APP_NAME:-fast_app}-rabbitmq"
+    ports:
+      - "${MAP_RABBITMQ_PORT:-5672}:5672"    # AMQP port
+      - "${MAP_RABBITMQ_MANAGEMENT_PORT:-15672}:15672"  # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    restart: unless-stopped
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - ${APP_NAME:-fast_app}
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
 volumes:
   redis_data:
+  rabbitmq_data:
 
 networks:
   ${APP_NAME:-fast_app}:

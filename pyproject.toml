@@ -31,9 +31,9 @@ keywords = ["framework", "laravel", "python", "development", "rapid", "mongodb",
 requires-python = ">=3.12"
 dependencies = [
     "motor>=3.7.0",
-    "rq>=2.4.0",
+    "python-socketio>=5.13.0",
+    "redis>=6.0.0",
     "quart>=0.20.0",
-    "redis>=6.2.0",
     "markdown>=3.8.2",
     "aiohttp>=3.12.0",
     "quart>=0.20.0",
@@ -44,6 +44,10 @@ dependencies = [
     "python-dateutil>=2.8.0",
     "pydantic>=1.8.0",
     "PyJWT>=2.9.0",
+    "aio-pika>=9.4.0",
+    "hypercorn>=0.17.3",
+    "fast-validation @ git+https://github.com/patrikmojzis/fast-validation.git",
+    "textual>=6.1.0"
 ]
 
 [project.optional-dependencies]
@@ -53,6 +57,18 @@ dev = [
     "pytest-cov>=4.0.0",
     "Faker>=15.0.0",
     "factory_boy>=3.2.0",
+    "black>=25.9.0",
+    "isort>=6.1.0",
+    "mypy>=1.17.1",
+]
+
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.21"
+]
+
+expo = [
+    "exponent_server_sdk>=2.1.0"
 ]
 
 [project.scripts]
@@ -133,6 +149,7 @@ show_error_codes = true
 module = [
     "pymongo.*",
     "redis.*",
+    "aio_pika.*",
 ]
 ignore_missing_imports = true
 

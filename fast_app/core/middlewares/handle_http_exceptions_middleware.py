@@ -3,7 +3,7 @@ from typing import Any, Callable, Awaitable
 
 from fast_app.contracts.middleware import Middleware
 from fast_app.exceptions.common_exceptions import AppException
-from fast_app.exceptions.http_exceptions import HttpException, ServerErrorException
+from fast_app.exceptions import HttpException, ServerErrorException, ModelException
 
 
 class HandleHttpExceptionsMiddleware(Middleware):
@@ -12,6 +12,8 @@ class HandleHttpExceptionsMiddleware(Middleware):
     async def handle(self, next_handler: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:
         try:
             return await next_handler(*args, **kwargs)
+        except ModelException as e:
+            return HttpException(status_code=e.http_status_code, message=e.message).to_response()
         except HttpException as e:
             return e.to_response()
         except AppException as e:

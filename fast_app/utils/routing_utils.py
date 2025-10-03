@@ -4,6 +4,9 @@ from quart import Quart
 
 from fast_app.contracts.middleware import Middleware
 from fast_app.core.middlewares.handle_exceptions_middleware import HandleExceptionsMiddleware
+from fast_app.core.middlewares.model_binding_middleware import ModelBindingMiddleware
+from fast_app.core.middlewares.schema_validation_middleware import SchemaValidationMiddleware
+from fast_app.core.middlewares.resource_response_middleware import ResourceResponseMiddleware
 
 if TYPE_CHECKING:
     from fast_app.contracts.route import Route
@@ -30,7 +33,7 @@ def apply_middleware_chain(handler: Callable, middlewares: list[Middleware | Typ
     return wrapped_handler
 
 def register_routes(app: Quart, routes: List['Route']) -> None:
-    """Register routes with the Quart application (HTTP and WebSocket)."""
+    """Register routes with the Quart application (HTTP only)."""
     # Flatten all routes
     flattened_routes = []
     for route in routes:
@@ -41,22 +44,27 @@ def register_routes(app: Quart, routes: List['Route']) -> None:
         if route.handler is None:
             continue  # Skip group routes without handlers
             
-        # Always add handle_exceptions as the first middleware
-        all_middlewares = [HandleExceptionsMiddleware]
+        # Always add handle_exceptions as the first middleware, resource conversion as the last
+        # Global middlewares order:
+        # 1) HandleExceptionsMiddleware (first)
+        # 2) ModelBindingMiddleware
+        # 3) SchemaValidationMiddleware
+        # 4) Route-specific middlewares (user-defined)
+        # 5) ResourceResponseMiddleware (last)
+        all_middlewares = [HandleExceptionsMiddleware, ModelBindingMiddleware, SchemaValidationMiddleware]
         if route.middlewares:
             all_middlewares.extend(route.middlewares)
+        # Ensure ResourceResponseMiddleware runs last to convert Resource -> Response
+        all_middlewares.append(ResourceResponseMiddleware)
         
         # Apply middleware chain to the handler
         wrapped_handler = apply_middleware_chain(route.handler, all_middlewares)
         
-        # Register the route with Quart (HTTP vs WS)
-        if getattr(route, 'is_websocket', False):
-            # Register websocket via decorator-style API to avoid relying on private add_* APIs
-            app.websocket(route.path)(wrapped_handler)
-        else:
-            app.add_url_rule(
-                rule=route.path,
-                endpoint=None,  # Let Quart auto-generate endpoint names
-                view_func=wrapped_handler,
-                methods=route.methods
-            )
+        # Generate a unique endpoint per method+path to avoid collisions in tests
+        endpoint_name = f"{wrapped_handler.__name__}:{','.join(sorted(route.methods or []))}:{route.path}"
+        app.add_url_rule(
+            rule=route.path,
+            endpoint=endpoint_name,
+            view_func=wrapped_handler,
+            methods=route.methods
+        )

@@ -1,7 +1,20 @@
 import re
 from datetime import datetime
+from functools import lru_cache
+from typing import Any, TYPE_CHECKING
 
 from bson import ObjectId
+
+if TYPE_CHECKING:
+    from fast_app.application import Application
+
+
+@lru_cache(maxsize=1)
+def _get_application() -> "Application":
+    """Prevent circular imports."""
+    from fast_app.application import Application
+
+    return Application()
 
 
 def serialise(val):
@@ -9,6 +22,9 @@ def serialise(val):
         return str(val)
     if isinstance(val, datetime):
         return val.isoformat()
+    app = _get_application()
+    if custom := app.get_serialiser_for_value(val):
+        return custom(val)
     # insert serialisation here <start>
 
     # insert serialisation here <end>
@@ -19,6 +35,16 @@ def serialise(val):
 
     return val
 
+
+
+def to_snake_case(value: str) -> str:
+    cleaned = value.strip()
+    if not cleaned:
+        return ""
+    interim = re.sub(r"(?<!^)(?=[A-Z])", "_", cleaned)
+    interim = re.sub(r"[\s\-]+", "_", interim)
+    interim = re.sub(r"[^0-9a-zA-Z_]+", "_", interim)
+    return interim.strip("_").lower()
 
 
 def pascal_case_to_snake_case(pascal: type | str) -> str:
@@ -53,5 +79,47 @@ def snake_case_to_pascal_case(snake: str) -> str:
     return ''.join(word.capitalize() for word in components)
 
 
+def is_snake_case(name: str) -> bool:
+    """
+    Basic check whether a string looks like snake_case.
+
+    Accepts lowercase letters and digits separated by single underscores.
+    """
+    return re.fullmatch(r"[a-z]+(?:_[a-z0-9]+)*", name) is not None
+
+
+def is_pascal_case(name: str) -> bool:
+    """
+    Basic check whether a string looks like PascalCase.
+
+    Accepts sequences starting with an uppercase letter and then alphanumerics.
+    """
+    return re.fullmatch(r"[A-Z][A-Za-z0-9]*", name) is not None
+
+
 def get_exception_error_type(exception: Exception) -> str:
     return pascal_case_to_snake_case(exception.__class__.__name__.lower().replace('exception', ''))
+
+
+def remove_suffix(text: str, suffix: str) -> str:
+    """
+    Remove an exact suffix from the given text if present.
+
+    Unlike str.rstrip, this removes only the provided suffix once,
+    not any combination of its characters.
+    """
+    if text.endswith(suffix):
+        return text[: -len(suffix)]
+    return text
+
+
+def safe_int(value: Any, default: int, minimum: int, maximum: int) -> int:
+    try:
+        iv = int(value)
+    except Exception:
+        return default
+    if iv < minimum:
+        return minimum
+    if iv > maximum:
+        return maximum
+    return iv

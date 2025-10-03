@@ -11,17 +11,8 @@ class EventListener(ABC):
     Event listeners handle the processing of events.
     """
     
-    def __init__(self, event: 'Event'):
-        """
-        Initialize the event listener with the event to handle.
-        
-        Args:
-            event: The event instance to handle
-        """
-        self.event = event
-    
     @abstractmethod
-    async def handle(self) -> None:
+    async def handle(self, event: 'Event') -> None:
         """
         Handle the event. This method must be implemented by subclasses.
         """

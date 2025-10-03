@@ -1,12 +1,11 @@
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
+from fast_app.utils.serialisation import pascal_case_to_snake_case, serialise, remove_suffix
 from fast_app.contracts.event import Event
-from fast_app.utils.serialisation import serialise
 
 if TYPE_CHECKING:
-    from fast_app.contracts.broadcast_channel import BroadcastChannel
-    from fast_app.contracts.websocket_event import WebsocketEvent
+    from fast_app.contracts.room import Room
     from fast_app.contracts.resource import Resource
 
 class BroadcastEvent(Event):
@@ -16,21 +15,20 @@ class BroadcastEvent(Event):
     Define event data fields in pydantic way.
     """
 
-    @abstractmethod
-    async def broadcast_on(self, *args, **kwargs) -> Union[str, 'BroadcastChannel']:
+    async def broadcast_on(self) -> Union[str, 'Room', list[Union[str, 'Room']]]:
         """
-        Get the channel to broadcast the event on.
+        Set the channel to broadcast the event on.
         """
-        pass
+        return remove_suffix(pascal_case_to_snake_case(self.__class__.__name__), "_event")
 
-    async def broadcast_when(self, *args, **kwargs) -> bool:
+    async def broadcast_when(self) -> bool:
         """
-        Check if the event should be broadcast.
+        Add conditions if the event should broadcast.
         """
         return True
 
-    async def broadcast_as(self, *args, **kwargs) -> Union[dict, 'WebsocketEvent', 'Resource', Any]:
+    async def broadcast_as(self) -> Optional[Union[dict, list, str, int, float, bool, 'Resource']]:
         """
-        Get the data to broadcast.
+        Modify how the event is broadcasted.
         """
-        return serialise(self.model_dump())
+        return self.model_dump()

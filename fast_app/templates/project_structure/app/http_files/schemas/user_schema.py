@@ -1,5 +1,5 @@
-from pydantic import BaseModel
+from fast_app import Schema
 
 
-class UserSchema(BaseModel):
+class UserSchema(Schema):
     name: str

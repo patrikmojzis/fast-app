@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Optional
 
@@ -15,14 +16,15 @@ def configure_env(env_file_name: Optional[str] = None) -> None:
         load_dotenv(env_file_name, override=True)
         return
 
-    if os.getenv("ENV", "debug") == "debug":
-        print("🐞 Running on debug mode")
+    environment = os.getenv("ENV", "debug")
 
-        for env_file in [".env.debug", ".env"]:
-            load_dotenv(env_file, override=True)
-            if os.getenv("ENV") is not None:
-                print(f"☑️ Loaded {env_file} file successfully")
-                break
+    for env_file in [f".env.{environment}", ".env"]:
+        load_dotenv(env_file, override=True)
+        if os.getenv("ENV") is not None:
+            logging.debug(f"☑️ Loaded {env_file} file successfully")
+            break
             
-        if os.getenv("ENV") is None:
-            print("🚫 Loading env file failed. Create .env.debug file in your project root.")
+    if os.getenv("ENV") is None:
+        print("🚫 Loading env file failed.")
+        print(f"Create .env file in your project root.")
+        print("For specific environment, create .env.<environment> file.")

@@ -1,7 +1,7 @@
 import sys
 import pytest
 
-from fast_app.app_provider import boot
+from fast_app.boot import boot
 from fast_app.application import Application
 from fast_app.core.events import dispatch_now
 
@@ -41,7 +41,7 @@ async def test_boot_autodiscovery(tmp_path, monkeypatch):
         "    pass\n"
         "class BootListener(EventListener):\n"
         "    called = False\n"
-        "    async def handle(self):\n"
+        "    async def handle(self, event):\n"
         "        BootListener.called = True\n"
         "events = {BootEvent: [BootListener]}\n"
     )

@@ -1,19 +1,11 @@
-import asyncio
+from __future__ import annotations
 
-from app.app_provider import boot
-
-
-async def _seed():
-    # Implement your async seeding logic here
-    pass
+from fast_app.contracts.seeder import Seeder
 
 
-def seed() -> None:
-    boot()
-    asyncio.run(_seed())
-
-
-if __name__ == '__main__':
-    seed()
+class NewClass(Seeder):
+    async def seed(self) -> None:
+        # Implement your async seeding logic here
+        pass
 
 
