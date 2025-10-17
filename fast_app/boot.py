@@ -95,6 +95,8 @@ def boot_from_app_config():
     if app.is_booted():
         return
 
+    configure_env()   # Loading here allows having env values in app_config.py
+
     try:
         spec = importlib.util.find_spec("app.app_config")
     except ModuleNotFoundError:
