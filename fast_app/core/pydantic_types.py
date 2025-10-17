@@ -27,7 +27,7 @@ from datetime import date, datetime, timezone
 from typing import Annotated, Any, Optional
 
 from bson import ObjectId
-from pydantic import PlainSerializer, WithJsonSchema
+from pydantic import PlainSerializer, StringConstraints, WithJsonSchema
 from pydantic.functional_validators import BeforeValidator
 
 
@@ -101,7 +101,7 @@ def _to_int(value: object) -> int:
             return int(value)
         raise ValueError("Invalid integer")
     if isinstance(value, str):
-        s = value.strip()
+        s = "".join(value.split())  # Remove all whitespace
         try:
             return int(s)
         except (TypeError, ValueError):
@@ -146,6 +146,15 @@ IntFromStrField = Annotated[
     BeforeValidator(_to_int),
 ]
 
+ShortStr = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=255,
+    )
+]
+
 
 __all__ = [
     "JSONField",
@@ -153,6 +162,7 @@ __all__ = [
     "DateField",
     "DateTimeField",
     "IntFromStrField",
+    "ShortStr",
 ]
 
 
