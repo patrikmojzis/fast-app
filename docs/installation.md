@@ -16,7 +16,7 @@ source .venv/bin/activate   # Windows: .venv\\Scripts\\activate
 2) Install FastApp
 
 ```bash
-pip install "fast-app[dev]"
+pip install "git+https://github.com/patrikmojzis/fast-app#egg=fast-app[dev]"
 ```
 
 3) Scaffold a new project

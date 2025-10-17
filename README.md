@@ -12,7 +12,7 @@ Compose Quart (HTTP), fast‑validation (Pydantic‑style), and Motor (Mongo) to
 
 ## Install
 ```bash
-pip install fast-app
+pip install git+https://github.com/patrikmojzis/fast-app
 ```
 
 ## Hello API in 60 seconds
@@ -47,8 +47,8 @@ register_routes(app, [
 ## CLI (essentials)
 - `fast-app init` – scaffold a new project
 - `fast-app make <type> <Name>` – generate models, schemas, resources, middleware, …
-- `fast-app run api` – start the API
-- `fast-app work` – run async workers
+- `fast-app serve` – start the asgi (debug)
+- `fast-app work` – work queue, events
 - `fast-app migrate` / `fast-app seed`
 
 ## Docs & Links

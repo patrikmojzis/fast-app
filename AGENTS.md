@@ -21,7 +21,7 @@ FastApp — Agent Quick Notes
 - CLI: `fast-app init | make | publish | migrate | seed | serve | work | exec | version`. See `docs/cli.md`.
 
 First run (local):
-1) `python -m venv .venv && source .venv/bin/activate && pip install "fast-app[dev]"`
+1) `python -m venv .venv && source .venv/bin/activate && pip install "git+https://github.com/patrikmojzis/fast-app#egg=fast-app[dev]""`
 2) `fast-app init`
 3) Create `.env.debug` with `ENV=debug`, `MONGO_URI=...`, `SECRET_KEY=...`
 4) `fast-app serve`
