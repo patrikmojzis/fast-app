@@ -21,6 +21,7 @@ nav:
       - Environment: enviroment.md
       - API: api.md
       - CLI: cli.md
+      - Middlewares: middlewares.md
       - Queue: queue.md
       - Scheduler: scheduler.md
       - Async Farm: async_farm.md
