@@ -381,6 +381,16 @@ class Model():
         return await cls.find_one({}, **kwargs)
 
     @classmethod
+    async def find_one_or_create(cls: type[T], query: dict[str, any], data: Optional[dict[str, any]] = None) -> T:
+        if data is None:
+            data = {}
+            
+        instance = await cls.find_one(query)
+        if instance:
+            return instance
+        return await cls.create({**query, **data})
+
+    @classmethod
     async def delete_many(cls, query: dict[str, any], **kwargs) -> None:
         coll = await cls.collection_cls()
         final_query = await cls.query_modifier(query, "delete_many", cls.collection_name())
