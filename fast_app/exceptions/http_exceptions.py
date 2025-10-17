@@ -77,3 +77,10 @@ class BadRequestException(HttpException):
             status_code=400,
             **kwargs
         )
+
+class PayloadTooLargeException(HttpException):
+    def __init__(self, **kwargs):
+        super().__init__(
+            status_code=413,
+            **kwargs
+        )
