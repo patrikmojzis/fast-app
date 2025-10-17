@@ -12,6 +12,7 @@ from .model_binding_middleware import ModelBindingMiddleware
 from .schema_validation_middleware import SchemaValidationMiddleware
 from .throttle_middleware import ThrottleMiddleware
 from .authorize_middleware import AuthorizeMiddleware
+from .belongs_to_middleware import BelongsToMiddleware
 
 __all__ = [
     "EtagMiddleware",
@@ -22,4 +23,5 @@ __all__ = [
     "SchemaValidationMiddleware",
     "ThrottleMiddleware",
     "AuthorizeMiddleware",
+    "BelongsToMiddleware",
 ]
