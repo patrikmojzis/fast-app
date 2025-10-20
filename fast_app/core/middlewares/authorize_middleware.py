@@ -34,6 +34,8 @@ class AuthorizeMiddleware(Middleware):
     ) -> None:
         self._ability = ability
         self._target = target
+        self._authorizible_key = authorizible_key
+        self._source = source
 
     async def handle(
         self,
@@ -41,10 +43,10 @@ class AuthorizeMiddleware(Middleware):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        if self.source == "request_context":
-            authorizable = g.get(self.authorizible_key)
+        if self._source == "request_context":
+            authorizable = g.get(self._authorizible_key)
         else:
-            authorizable = context.get(self.authorizible_key)
+            authorizable = context.get(self._authorizible_key)
 
         if not authorizable:
             raise UnauthorisedException()
