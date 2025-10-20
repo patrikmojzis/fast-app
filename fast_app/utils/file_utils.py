@@ -3,9 +3,15 @@ import os
 import shutil
 import uuid
 from pathlib import Path
-from typing import Optional, Union, Tuple
+from typing import Any, Optional, Union, Tuple
 
+from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
+
+try:
+    import magic
+except Exception:  # pragma: no cover - optional dependency
+    magic = None  # type: ignore[assignment]
 
 
 def secure_path(filename: str) -> str:
@@ -28,7 +34,7 @@ def generate_unique_filename(original_filename: str, preserve_extension: bool = 
         return uuid.uuid4().hex
 
 
-def get_file_extension(filename: str) -> str:
+def get_file_extension_from_filename(filename: str) -> str:
     """Get the file extension from a filename."""
     return Path(filename).suffix.lower()
 
@@ -146,7 +152,7 @@ def validate_file_type(filename: str, allowed_extensions: Union[list, tuple]) ->
     Returns:
         True if file type is allowed, False otherwise
     """
-    file_ext = get_file_extension(filename)
+    file_ext = get_file_extension_from_filename(filename)
     
     # Normalize extensions (ensure they start with a dot)
     normalized_extensions = []
@@ -170,9 +176,7 @@ def sanitize_filename(filename: str, max_length: int = 255) -> str:
         Sanitized filename
     """
     # Remove invalid characters
-    invalid_chars = '<>:"/\\|?*'
-    for char in invalid_chars:
-        filename = filename.replace(char, '_')
+    filename = secure_filename(filename)
     
     # Remove control characters
     filename = ''.join(char for char in filename if ord(char) >= 32)
@@ -224,97 +228,145 @@ def build_file_path(directory: str, filename: str, create_dirs: bool = False) ->
     return str(full_path)
 
 
-class FileValidator:
+class FileStorageValidator:
     """
-    File validation utility class for comprehensive file checks.
+    Comprehensive file validator for uploads.
+    - Verifies real MIME from content via libmagic.
+    - Checks extension allow-list.
+    - Checks max size (bytes derived from actual content).
+    - (Optional) rejects when client/filename MIME disagrees with real MIME.
     """
-    
-    def __init__(self, 
-                 max_size_mb: float = 10.0,
-                 allowed_extensions: Optional[list] = None,
-                 allowed_mime_types: Optional[list] = None):
-        """
-        Initialize file validator.
-        
-        Args:
-            max_size_mb: Maximum file size in megabytes
-            allowed_extensions: List of allowed file extensions
-            allowed_mime_types: List of allowed MIME types
-        """
-        self.max_size_mb = max_size_mb
-        self.allowed_extensions = allowed_extensions or []
-        self.allowed_mime_types = allowed_mime_types or []
-    
-    def validate(self, filename: str, size_bytes: int) -> Tuple[bool, Optional[str]]:
-        """
-        Validate a file against all configured rules.
-        
-        Args:
-            filename: Name of the file
-            size_bytes: Size of the file in bytes
-        
-        Returns:
-            Tuple of (is_valid, error_message)
-        """
-        # Check file size
-        if not validate_file_size(size_bytes, self.max_size_mb):
-            return False, f"File size exceeds maximum allowed size of {self.max_size_mb}MB"
-        
-        # Check file extension
-        if self.allowed_extensions and not validate_file_type(filename, self.allowed_extensions):
-            return False, f"File type not allowed. Allowed extensions: {', '.join(self.allowed_extensions)}"
-        
-        # Check MIME type
-        if self.allowed_mime_types:
-            mime_type = get_mime_type(filename)
-            if mime_type not in self.allowed_mime_types:
-                return False, f"File MIME type not allowed. Allowed types: {', '.join(self.allowed_mime_types)}"
-        
-        return True, None
-    
-    def is_valid(self, filename: str, size_bytes: int) -> bool:
-        """
-        Check if file is valid (convenience method).
-        """
-        valid, _ = self.validate(filename, size_bytes)
-        return valid
 
+    def __init__(
+        self,
+        max_size_mb: float = 10.0,
+        allowed_extensions: Optional[list[str]] = None,
+        allowed_mime_types: Optional[list[str]] = None,
+        reject_mime_mismatch: bool = True,  # fail if client/filename MIME != real MIME
+    ):
+        self.max_size_mb = max_size_mb
+        self.allowed_extensions = {e.lower().lstrip(".") for e in (allowed_extensions or [])}
+        self.allowed_mime_types = set(allowed_mime_types or [])
+        self.reject_mime_mismatch = reject_mime_mismatch
+        self.max_size_bytes = int(self.max_size_mb * 1024 * 1024)
+
+    def validate(self, file: FileStorage) -> Tuple[bool, Optional[str], dict[str, Any]]:
+        """
+        Validate a werkzeug FileStorage (Quart/Flask upload).
+
+        Returns: (is_valid, error_message, meta)
+          meta = {
+            "filename", "size_bytes",
+            "ext",
+            "real_mime",        # preferred MIME (magic -> guess)
+            "magic_mime",       # from libmagic (optional)
+            "magic_available",  # whether magic import succeeded
+            "client_mime",      # from browser header
+            "guessed_mime"      # from filename (mimetypes)
+          }
+        """
+        filename = getattr(file, "filename", "") or ""
+        client_mime = getattr(file, "mimetype", None)
+
+        # Read bytes ONCE to measure size + detect MIME; then rewind.
+        content: bytes = file.read()
+        size_bytes = len(content)
+        try:
+            file.seek(0)  # rewind so caller can read/save again
+        except Exception:
+            # Some storages expose file.stream
+            try:
+                file.stream.seek(0)
+            except Exception:
+                pass  # worst case, caller must handle
+
+        guessed_mime, _ = mimetypes.guess_type(filename)
+        magic_mime: Optional[str] = None
+
+        if magic and content:
+            try:
+                magic_mime = magic.from_buffer(content, mime=True)
+            except Exception:
+                magic_mime = None
+
+        real_mime = magic_mime or guessed_mime
+        ext = get_file_extension_from_filename(filename)
+
+        meta = {
+            "filename": filename,
+            "size_bytes": size_bytes,
+            "ext": ext,
+            "real_mime": real_mime,
+            "magic_mime": magic_mime,
+            "magic_available": magic is not None,
+            "client_mime": client_mime,
+            "guessed_mime": guessed_mime,
+        }
+
+        # ---- Size check (actual bytes) ----
+        if size_bytes == 0:
+            return False, "Empty file.", meta
+        if size_bytes > self.max_size_bytes:
+            return False, f"File size exceeds {self.max_size_mb} MB.", meta
+
+        # ---- Extension allow-list (optional) ----
+        if self.allowed_extensions and ext not in self.allowed_extensions:
+            return False, f"File type not allowed. Allowed: {', '.join(sorted(self.allowed_extensions))}", meta
+
+        # ---- Real MIME allow-list (optional, strongest check) ----
+        if self.allowed_mime_types:
+            candidate_mime = magic_mime or guessed_mime
+            if candidate_mime and candidate_mime not in self.allowed_mime_types:
+                return False, f"MIME not allowed ({candidate_mime}). Allowed: {', '.join(sorted(self.allowed_mime_types))}", meta
+
+        # ---- Mismatch checks (optional hard-fail) ----
+        if self.reject_mime_mismatch and magic_mime:
+            if client_mime and (client_mime != magic_mime):
+                return False, f"MIME mismatch: client={client_mime}, real={magic_mime}", meta
+            if guessed_mime and (guessed_mime != magic_mime):
+                return False, f"Filename does not match content: name={guessed_mime}, real={magic_mime}", meta
+
+        return True, None, meta
+
+    def is_valid(self, file: FileStorage) -> bool:
+        ok, _, _ = self.validate(file)
+        return ok
 
 # Common file validators
-ImageValidator = FileValidator(
-    max_size_mb=5.0,
-    allowed_extensions=['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'],
-    allowed_mime_types=['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
-)
+# ImageValidator = FileStorageValidator(
+#     max_size_mb=5.0,
+#     allowed_extensions=['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'],
+#     allowed_mime_types=['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+# )
 
-DocumentValidator = FileValidator(
-    max_size_mb=20.0,
-    allowed_extensions=['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.csv', '.rtf'],
-    allowed_mime_types=[
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-powerpoint',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'text/plain',
-        'text/csv',
-        'application/rtf'
-    ]
-)
+# DocumentValidator = FileStorageValidator(
+#     max_size_mb=20.0,
+#     allowed_extensions=['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.csv', '.rtf'],
+#     allowed_mime_types=[
+#         'application/pdf',
+#         'application/msword',
+#         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+#         'application/vnd.ms-excel',
+#         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+#         'application/vnd.ms-powerpoint',
+#         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+#         'text/plain',
+#         'text/csv',
+#         'application/rtf'
+#     ]
+# )
 
-VideoValidator = FileValidator(
-    max_size_mb=100.0,
-    allowed_extensions=['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv'],
-    allowed_mime_types=['video/mp4', 'video/avi', 'video/quicktime', 'video/x-ms-wmv', 'video/webm', 'video/x-matroska']
-)
+# VideoValidator = FileStorageValidator(
+#     max_size_mb=100.0,
+#     allowed_extensions=['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv'],
+#     allowed_mime_types=['video/mp4', 'video/avi', 'video/quicktime', 'video/x-ms-wmv', 'video/webm', 'video/x-matroska']
+# )
 
-AudioValidator = FileValidator(
-    max_size_mb=50.0,
-    allowed_extensions=['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a'],
-    allowed_mime_types=['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/aac', 'audio/mp4']
-)
+# AudioValidator = FileStorageValidator(
+#     max_size_mb=50.0,
+#     allowed_extensions=['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a'],
+#     allowed_mime_types=['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/aac', 'audio/mp4']
+# )
 
 
 # CLI-specific utilities

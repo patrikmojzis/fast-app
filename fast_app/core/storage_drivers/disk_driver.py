@@ -156,6 +156,7 @@ class DiskDriver(StorageDriver):
             conditional=True,
             max_age=max_age if max_age is not None else (3600 if inline else 0),
         )
+        resp.headers["X-Content-Type-Options"] = "nosniff"
         if extra_headers:
             for k, v in extra_headers.items():
                 resp.headers[k] = v

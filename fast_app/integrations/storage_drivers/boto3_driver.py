@@ -13,17 +13,17 @@ class Boto3Driver(StorageDriver):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.bucket = config.get("bucket")
-        self.region = config.get("region", "us-east-1")
+        self.region = config.get("region_name", "us-east-1")
         try:
             import boto3
             from botocore.exceptions import ClientError
 
             self._client = boto3.client(
                 "s3",
-                aws_access_key_id=config.get("key"),
-                aws_secret_access_key=config.get("secret"),
+                aws_access_key_id=config.get("access_key_id"),
+                aws_secret_access_key=config.get("secret_access_key"),
                 region_name=self.region,
-                endpoint_url=config.get("endpoint"),
+                endpoint_url=config.get("endpoint_url"),
             )
             self._ClientError = ClientError
         except ImportError:
@@ -56,13 +56,9 @@ class Boto3Driver(StorageDriver):
                 break
             yield data
 
-    async def put(self, path: str, content: Union[str, bytes, IO], visibility: Optional[str] = None) -> str:
+    async def put(self, path: str, content: Union[str, bytes, IO], extra_args: Optional[Dict[str, Any]] = None) -> str:
         key = self._key(path)
-        extra_args: Dict[str, Any] = {}
-        if visibility == "public":
-            extra_args["ACL"] = "public-read"
-        elif visibility == "private":
-            extra_args["ACL"] = "private"
+        extra_args: Dict[str, Any] = extra_args or {}
         content_type = get_mime_type(path)
         if content_type:
             extra_args["ContentType"] = content_type
@@ -202,7 +198,10 @@ class Boto3Driver(StorageDriver):
             for chunk in self.stream(path):
                 yield chunk
 
-        headers = {"Content-Disposition": f'{disposition}; filename="{safe_name}"'}
+        headers = {
+            "Content-Disposition": f'{disposition}; filename="{safe_name}"',
+            "X-Content-Type-Options": "nosniff"
+        }
         if extra_headers:
             headers.update(extra_headers)
         if max_age is not None:

@@ -25,7 +25,7 @@ class StorageDriver(ABC):
         pass
 
     @abstractmethod
-    async def put(self, path: str, content: Union[str, bytes, IO], visibility: Optional[str] = None) -> str:
+    async def put(self, path: str, content: Union[str, bytes, IO], **kwargs) -> str:
         pass
 
     @abstractmethod

@@ -47,7 +47,8 @@ dependencies = [
     "aio-pika>=9.4.0",
     "hypercorn>=0.17.3",
     "fast-validation @ git+https://github.com/patrikmojzis/fast-validation.git",
-    "textual>=6.1.0"
+    "textual>=6.1.0",
+    "python-magic>=0.4.27"
 ]
 
 [project.optional-dependencies]
