@@ -42,6 +42,37 @@ class InviteSchema(Schema):
     role: Literal["admin", "editor", "viewer"] = Field(..., description="Role in the workspace")
 ```
 
+## Convenience field types
+
+When I need quick coercion helpers, `fast_app.core.pydantic_types` ships a handful of annotated types that feel native to Pydantic while keeping Mongo- and JSON-friendly behaviour:
+
+- `ObjectIdField`: Accepts strings or `ObjectId` instances and serialises back to hex strings.
+- `DateField` and `DateTimeField`: Parse ISO strings (and datetimes with `Z`) into Python `date` / `datetime`, serialising back to ISO format.
+- `IntFromStrField`: Coerces numeric strings and exact floats to integers, rejecting booleans and fractional floats.
+- `JSONField`: Allows raw dict/list input or JSON strings and returns Python objects.
+- `ShortStr`: Strips whitespace and constrains length to 1–255 characters.
+
+```python
+from fast_app.core.pydantic_types import (
+    ObjectIdField,
+    DateField,
+    DateTimeField,
+    IntFromStrField,
+    ShortStr,
+)
+
+
+class SubscriptionSchema(Schema):
+    user_id: ObjectIdField
+    plan: ShortStr
+    quota: IntFromStrField = 0
+    starts_at: DateField
+    renewed_at: DateTimeField | None = None
+
+```
+
+All of these types are plain Pydantic annotations, so they work with validators, JSON schema generation, and the automatic serialisation behaviour provided by FastApp resources.
+
 ## Async rule validation
 
 After Pydantic validates structure and types, you can run additional async checks (e.g., hit the database, inspect related models). Define rules inside an inner `Meta` class using `Schema.Rule`.
@@ -51,6 +82,7 @@ from typing import Optional, Literal
 from pydantic import Field, EmailStr
 
 from fast_app import Schema
+from fast_app.core.pydantic_types import ObjectIdField
 from fast_app.core.validation_rules.exists_validator_rule import ExistsValidatorRule
 from app.models import Rep, County
 
@@ -58,8 +90,8 @@ from app.models import Rep, County
 class LeadSchema(Schema):
     name: Optional[str] = Field(None, description="Lead's full name")
     email: Optional[EmailStr] = Field(None, description="Lead's email")
-    rep_id: Optional[str] = Field(None, description="Assigned sales representative")
-    county_id: Optional[str] = Field(None, description="Lead county")
+    rep_id: Optional[ObjectIdField] = Field(None, description="Assigned sales representative")
+    county_id: Optional[ObjectIdField] = Field(None, description="Lead county")
     source: Optional[Literal["direct", "eshop", "pharmacy", "distributor"]] = None
 
     class Meta:
