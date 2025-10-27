@@ -2,7 +2,7 @@
 
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, TypedDict
 
 import aiohttp
@@ -18,6 +18,7 @@ from fast_app.exceptions.apple_auth_exceptions import (
     AppleTokenRevokeError,
 )
 from fast_app.exceptions.common_exceptions import EnvMissingException
+from fast_app.utils.datetime_utils import now
 
 
 class AppleJWTDecoded(TypedDict):
@@ -162,8 +163,8 @@ async def sign_in(identity_token: str) -> AppleJWTDecoded:
         raise AppleInvalidSignatureError()
     
     # Check if token has expired
-    expired_date = datetime.fromtimestamp(jwt_decoded['exp'])
-    if expired_date < datetime.now():
+    expired_date = datetime.fromtimestamp(jwt_decoded['exp'], tz=timezone.utc)
+    if expired_date < now():
         raise AppleTokenExpiredError()
     
     return AppleJWTDecoded(jwt_decoded)

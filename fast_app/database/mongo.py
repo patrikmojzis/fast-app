@@ -21,7 +21,11 @@ async def setup_mongo():
         raise EnvMissingException("MONGO_URI")
         
     # Connect to MongoDB with DatabaseCacheFlusher attached
-    mongo = AsyncIOMotorClient(os.getenv('MONGO_URI'), event_listeners=[DatabaseCacheFlusher()])
+    mongo = AsyncIOMotorClient(
+        os.getenv('MONGO_URI'),
+        event_listeners=[DatabaseCacheFlusher()],
+        tz_aware=True,
+    )
     db = mongo[db_name]
 
     logging.debug(f"Connected to MongoDB database: {db_name}")

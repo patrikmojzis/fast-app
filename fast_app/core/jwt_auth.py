@@ -7,6 +7,7 @@ from bson import ObjectId
 
 from fast_app.exceptions.auth_exceptions import InvalidTokenTypeException, TokenExpiredException, InvalidTokenException
 from fast_app.exceptions.common_exceptions import EnvMissingException
+from fast_app.utils.datetime_utils import now
 
 # Token types
 ACCESS_TOKEN_TYPE = "access"
@@ -50,15 +51,15 @@ def create_access_token(sub: str | ObjectId, sid: str | ObjectId, metadata: Dict
     """
     _validate_env()
 
-    now = datetime.now(timezone.utc)
+    present_time = now()
     
     payload: AccessToken = {
         "sub": str(sub),
         "sid": str(sid),
         "metadata": metadata,
         "token_type": ACCESS_TOKEN_TYPE,
-        "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(seconds=ACCESS_TOKEN_LIFETIME)).timestamp()),
+        "iat": int(present_time.timestamp()),
+        "exp": int((present_time + timedelta(seconds=ACCESS_TOKEN_LIFETIME)).timestamp()),
     }
     
     return jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm=ALGORITHM)
@@ -76,14 +77,14 @@ def create_refresh_token(sub: str | ObjectId, metadata: Dict[str, Any] = None) -
     """
     _validate_env()
 
-    now = datetime.now(timezone.utc)
+    present_time = now()
     
     payload: RefreshToken = {
         "sub": str(sub),
         "metadata": metadata,
         "token_type": REFRESH_TOKEN_TYPE,
-        "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(seconds=REFRESH_TOKEN_LIFETIME)).timestamp()),
+        "iat": int(present_time.timestamp()),
+        "exp": int((present_time + timedelta(seconds=REFRESH_TOKEN_LIFETIME)).timestamp()),
     }
     
     return jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm=ALGORITHM)

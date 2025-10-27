@@ -5,6 +5,7 @@ from app.observers.auth_observer import AuthObserver
 from bson import ObjectId
 
 from fast_app import Model, register_observer, create_access_token
+from fast_app.utils.datetime_utils import now
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -34,7 +35,7 @@ class Auth(Model):
     async def cleanup_expired(cls, grace_period_days: int = 30) -> None:
         """Remove expired refresh tokens from database."""
         await cls.delete_many({
-            'expires_at': {'$lt': datetime.now() + timedelta(days=grace_period_days)}
+            'expires_at': {'$lt': now() + timedelta(days=grace_period_days)}
         })
     
     @classmethod

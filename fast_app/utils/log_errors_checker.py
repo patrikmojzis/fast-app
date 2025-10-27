@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from fast_app.utils.logging import get_log_file_path
 from typing import Iterable, List, TypedDict
+from fast_app.utils.datetime_utils import now
 
 # Shared helpers for jobs
 DEFAULT_LOG_ERRORS_CHECK_MINUTES: int = 5
@@ -48,7 +49,7 @@ class LogErrorsChecker:
         if entry_time is None:
             return False
             
-        cutoff_time = datetime.now() - timedelta(minutes=self.check_minutes)
+        cutoff_time = now() - timedelta(minutes=self.check_minutes)
         return entry_time >= cutoff_time
     
     def get_error_entries(self) -> List[LogErrorEntry]:

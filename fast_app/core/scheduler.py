@@ -8,6 +8,7 @@ from typing import Any, Callable, NotRequired, TypedDict
 from redis import asyncio as aioredis
 
 from fast_app.core.queue import queue
+from fast_app.utils.datetime_utils import now
 
 
 class SchedulerJobSpec(TypedDict):
@@ -71,7 +72,7 @@ async def run_scheduler(jobs: list[SchedulerJobSpec]) -> None:
                 await queue(func)
                 # Fire-and-forget best-effort timestamp
                 try:
-                    await r.set(last_key, datetime.now(timezone.utc).isoformat())
+                    await r.set(last_key, now().isoformat())
                 except Exception:
                     pass
 

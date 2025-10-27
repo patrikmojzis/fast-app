@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from quart import has_request_context, request
 
 from fast_app import Observer, create_refresh_token, REFRESH_TOKEN_LIFETIME, get_client_ip
+from fast_app.utils.datetime_utils import now
 
 if TYPE_CHECKING:
     from app.models.auth import Auth
@@ -26,5 +27,5 @@ class AuthObserver(Observer):
                 auth.user_agent = request.headers.get('User-Agent')
 
         auth.refresh_token = create_refresh_token(auth.user_id)
-        auth.expires_at = datetime.now() + timedelta(seconds=REFRESH_TOKEN_LIFETIME)        
+        auth.expires_at = now() + timedelta(seconds=REFRESH_TOKEN_LIFETIME)        
 

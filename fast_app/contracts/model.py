@@ -15,6 +15,7 @@ from fast_app.utils.model_utils import build_search_query_from_string
 from fast_app.utils.query_builder import QueryBuilder
 from fast_app.utils.serialisation import serialise
 from fast_app.utils.versioned_cache import bump_collection_version
+from fast_app.utils.datetime_utils import now
 
 if TYPE_CHECKING:
     from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorCommandCursor, AsyncIOMotorCursor
@@ -182,8 +183,8 @@ class Model():
         await self._notify_observer('on_creating')
         to_insert = {
             **{key: self.get(key) for key in self.fillable_fields()},
-            'created_at': self.get('created_at') or datetime.now(),
-            'updated_at': self.get('updated_at') or datetime.now(),
+            'created_at': self.get('created_at') or now(),
+            'updated_at': self.get('updated_at') or now(),
         }
         data = await self.query_modifier(to_insert, "create", self.collection_name())
         coll = await self.collection()
@@ -440,7 +441,7 @@ class Model():
 
     @classmethod
     async def insert_many(cls, data: list[dict[str, any]]) -> None:
-        base_meta = await cls.query_modifier({'created_at': datetime.now(), 'updated_at': datetime.now()}, "insert_many", cls.collection_name())
+        base_meta = await cls.query_modifier({'created_at': now(), 'updated_at': now()}, "insert_many", cls.collection_name())
         for d in data:
             d.update(base_meta)
 

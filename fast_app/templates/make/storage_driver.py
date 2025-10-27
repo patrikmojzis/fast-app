@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Dict, IO, List, Optional, Union
 
 from fast_app import StorageDriver
-
+from fast_app.utils.datetime_utils import now
 
 class NewClass(StorageDriver):
     async def exists(self, path: str) -> bool:
@@ -27,7 +27,7 @@ class NewClass(StorageDriver):
         return 0
 
     async def last_modified(self, path: str) -> datetime:
-        return datetime.now()
+        return now()
 
     async def files(self, directory: str = "", recursive: bool = False) -> List[str]:
         return []

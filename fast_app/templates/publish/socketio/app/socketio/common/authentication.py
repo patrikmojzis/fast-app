@@ -11,11 +11,14 @@ from bson import ObjectId
 from datetime import datetime
 import asyncio
 from socketio import AsyncServer, AsyncNamespace
+from fast_app.utils.datetime_utils import now
+
 
 async def authenticate(sio: AsyncServer | AsyncNamespace, sid: str, environ: dict, auth_headers: dict) -> None:
-    access_token = auth_headers.get("token")
-    if not access_token:
+    if not auth_headers or not auth_headers.get("token"):
         raise ConnectionRefusedError("No access token provided")
+
+    access_token = auth_headers.get("token")
 
     try:
         payload = decode_token(access_token, token_type=ACCESS_TOKEN_TYPE)
@@ -31,8 +34,8 @@ async def authenticate(sio: AsyncServer | AsyncNamespace, sid: str, environ: dic
         raise ConnectionRefusedError("Invalid access token")
     
     user, auth = await asyncio.gather(
-        user.update({'last_seen_at': datetime.now()}),
-        auth.update({'last_used_at': datetime.now()}),
+        user.update({'last_seen_at': now()}),
+        auth.update({'last_used_at': now()}),
     )
 
     # Save into the GLOBAL session (accessible from server handlers),

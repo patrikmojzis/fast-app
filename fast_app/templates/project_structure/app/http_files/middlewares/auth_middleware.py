@@ -13,6 +13,7 @@ from fast_app import (
     ACCESS_TOKEN_TYPE,
 )
 from fast_app.exceptions import AuthException, UnauthorisedException
+from fast_app.utils.datetime_utils import now
 
 
 class AuthMiddleware(Middleware):
@@ -42,8 +43,8 @@ class AuthMiddleware(Middleware):
             
         # Update last seen timestamp
         user, auth = await asyncio.gather(
-            user.update({'last_seen_at': datetime.now()}),
-            auth.update({'last_used_at': datetime.now()}),
+            user.update({'last_seen_at': now()}),
+            auth.update({'last_used_at': now()}),
         )
             
         # Store user and auth in g context
