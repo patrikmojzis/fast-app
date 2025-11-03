@@ -77,7 +77,7 @@ async def search():
     return await search_paginated(Lead, LeadResource)
 ```
 
-### `paginate(model, resource, *, filter=None, sort=None)`
+### `paginate(Model, Resource, *, filter=None, sort=None)`
 
 Convenience wrapper: checks for `?search=...` and delegates to `search_paginated` or `list_paginated` accordingly.
 
