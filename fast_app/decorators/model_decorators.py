@@ -9,7 +9,7 @@ if TYPE_CHECKING:  # pragma: no cover - imported for type checking only
 
 T = TypeVar('T')
 
-def register_observer(observer_cls: 'Observer'):
+def register_observer(observer_cls: type['Observer']):
     def decorator(model_cls):
         original_init = model_cls.__init__
 
@@ -23,7 +23,7 @@ def register_observer(observer_cls: 'Observer'):
     return decorator
 
 
-def register_policy(policy_cls: 'Policy'):
+def register_policy(policy_cls: type['Policy']):
     def decorator(model_cls):
         model_cls.policy = policy_cls()
         return model_cls

@@ -103,7 +103,7 @@ def _build_sort_query(list_query: ListQuery, default_sort: Optional[list[tuple[s
     return [('_id', -1)]
 
 
-async def search_paginated(model: 'Model', resource: 'Resource', *, filter: FilterInput | None = None, sort: Optional[list[tuple[str, int]]] = None) -> dict:
+async def search_paginated(model: type['Model'], resource: type['Resource'], *, filter: FilterInput | None = None, sort: Optional[list[tuple[str, int]]] = None) -> dict:
     base_filter = _normalize_filter(filter)
 
     params = await validate_query(SearchQuery)
@@ -121,7 +121,7 @@ async def search_paginated(model: 'Model', resource: 'Resource', *, filter: Filt
         "data": await resource(res["data"]).dump(),
     }
 
-async def list_paginated(model: 'Model', resource: 'Resource', *, filter: FilterInput | None = None, sort: Optional[list[tuple[str, int]]] = None) -> dict:
+async def list_paginated(model: type['Model'], resource: type['Resource'], *, filter: FilterInput | None = None, sort: Optional[list[tuple[str, int]]] = None) -> dict:
     base_filter = _normalize_filter(filter)
 
     params = await validate_query(ListQuery)
@@ -147,7 +147,7 @@ async def list_paginated(model: 'Model', resource: 'Resource', *, filter: Filter
         'data': await resource(result).dump(),
     }
 
-async def paginate(model: 'Model', resource: 'Resource', *, filter: FilterInput | None = None, sort: Optional[list[tuple[str, int]]] = None) -> 'Response':
+async def paginate(model: type['Model'], resource: type['Resource'], *, filter: FilterInput | None = None, sort: Optional[list[tuple[str, int]]] = None) -> dict:
     if request.args.get('search'):
         return await search_paginated(model, resource, filter=filter, sort=sort)
     else:

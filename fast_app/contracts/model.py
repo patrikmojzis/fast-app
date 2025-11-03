@@ -1,7 +1,7 @@
 # app/models/model.py
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, TypeVar, ClassVar, Any, get_type_hints, get_origin, Self
+from typing import Optional, TypeVar, ClassVar, Any, get_type_hints, get_origin, Self, Union
 from typing import TYPE_CHECKING
 
 from bson import ObjectId
@@ -27,7 +27,7 @@ T = TypeVar('T', bound='Model')
 
 
 @dataclass
-class Model():
+class Model:
     protected: ClassVar[list[str]] = ["_id", "created_at", "updated_at"]
 
     policy: ClassVar[Optional['Policy']] = None
@@ -83,7 +83,7 @@ class Model():
 
     @classmethod
     @cached_db_retrieval()
-    async def exec_find_one(cls, *args, **kwargs) -> Optional[dict[str, any]]:
+    async def exec_find_one(cls, *args, **kwargs) -> Optional[dict[str, Any]]:
         return await (await cls.collection_cls()).find_one(*args, **kwargs)
 
     @classmethod
@@ -195,7 +195,7 @@ class Model():
         await self._notify_observer('on_created')
 
     @classmethod
-    async def create(cls: type[T], data: dict[str, any]) -> T:
+    async def create(cls: type[T], data: dict[str, Any]) -> T:
         instance = cls(**data)
         await instance.save()
         return instance
@@ -214,8 +214,8 @@ class Model():
         return self
 
     @classmethod
-    async def search(cls: type[T], query: str | dict[str, any] | ObjectId | int, limit: int = 10, skip: int = 0, 
-                                   sort: Optional[list[tuple[str, int]]] = None) -> dict[str, any]:
+    async def search(cls: type[T], query: str | dict[str, Any] | ObjectId | int, limit: int = 10, skip: int = 0, 
+                                   sort: Optional[list[tuple[str, int]]] = None) -> dict[str, Any]:
         """
         Search for records in the current collection and related collections.
         """
@@ -349,19 +349,19 @@ class Model():
         return await cls.find_one({'_id': object_id})
 
     @classmethod
-    async def find(cls: type[T], query: dict[str, any], **kwargs) -> list[T]:
+    async def find(cls: type[T], query: dict[str, Any], **kwargs) -> list[T]:
         final_query = await cls.query_modifier(query, "find", cls.collection_name())
         results = await cls.exec_find(final_query, **kwargs)
         return [cls(**data) for data in results]
 
     @classmethod
-    async def find_one(cls: type[T], query: dict[str, any], **kwargs) -> Optional[T]:
+    async def find_one(cls: type[T], query: dict[str, Any], **kwargs) -> Optional[T]:
         final_query = await cls.query_modifier(query, "find_one", cls.collection_name())
         data = await cls.exec_find_one(final_query, **kwargs)
         return cls(**data) if data else None
 
     @classmethod
-    async def find_or_fail(cls: type[T], query: dict[str, any], **kwargs) -> T:
+    async def find_or_fail(cls: type[T], query: dict[str, Any], **kwargs) -> T:
         instance = await cls.find_one(query, **kwargs)
         if not instance:
             raise ModelNotFoundException(cls.__name__)
@@ -373,7 +373,7 @@ class Model():
         return await cls.find_or_fail({'_id': object_id})
 
     @classmethod
-    async def exists(cls, query: dict[str, any]) -> bool:
+    async def exists(cls, query: dict[str, Any]) -> bool:
         final_query = await cls.query_modifier(query, "count", cls.collection_name())
         return await cls.exec_count(final_query) > 0
 
@@ -382,7 +382,7 @@ class Model():
         return await cls.find_one({}, **kwargs)
 
     @classmethod
-    async def find_one_or_create(cls: type[T], query: dict[str, any], data: Optional[dict[str, any]] = None) -> T:
+    async def find_one_or_create(cls: type[T], query: dict[str, Any], data: Optional[dict[str, Any]] = None) -> T:
         if data is None:
             data = {}
             
@@ -392,7 +392,7 @@ class Model():
         return await cls.create({**query, **data})
 
     @classmethod
-    async def delete_many(cls, query: dict[str, any], **kwargs) -> None:
+    async def delete_many(cls, query: dict[str, Any], **kwargs) -> None:
         coll = await cls.collection_cls()
         final_query = await cls.query_modifier(query, "delete_many", cls.collection_name())
         await coll.delete_many(final_query, **kwargs)
@@ -407,14 +407,14 @@ class Model():
         await self._notify_observer('on_deleted')
 
     @classmethod
-    async def update_many(cls, query: dict[str, any], data: dict[str, any], **kwargs) -> None:
+    async def update_many(cls, query: dict[str, Any], data: dict[str, Any], **kwargs) -> None:
         coll = await cls.collection_cls()
         final_query = await cls.query_modifier(query, "update_many", cls.collection_name())
         update_data = cls._build_update_payload(set_values=data.get("$set"), extra_ops={k: v for k, v in data.items() if k != "$set"}, touch_timestamp=True)
         await coll.update_many(final_query, update_data, **kwargs)
         bump_collection_version(cls.collection_name())
 
-    async def update(self, data: dict[str, any]) -> Self:
+    async def update(self, data: dict[str, Any]) -> Self:
         for key, value in data.items():
             self.clean[key] = self.get(key)
             setattr(self, key, value)
@@ -430,17 +430,17 @@ class Model():
         return self
 
     @classmethod
-    async def count(cls, query: dict[str, any] = None, **kwargs) -> int:
+    async def count(cls, query: dict[str, Any] = None, **kwargs) -> int:
         final_query = await cls.query_modifier(query, "count", cls.collection_name())
         return await cls.exec_count(final_query, **kwargs)
 
     @classmethod
-    async def aggregate(cls, pipeline: list[dict[str, any]], **kwargs) -> list[dict[str, any]]:
+    async def aggregate(cls, pipeline: list[dict[str, Any]], **kwargs) -> list[dict[str, Any]]:
         cursor: AsyncIOMotorCommandCursor = (await cls.collection_cls()).aggregate(pipeline, **kwargs)
         return await cursor.to_list(length=None)
 
     @classmethod
-    async def insert_many(cls, data: list[dict[str, any]]) -> None:
+    async def insert_many(cls, data: list[dict[str, Any]]) -> None:
         base_meta = await cls.query_modifier({'created_at': now(), 'updated_at': now()}, "insert_many", cls.collection_name())
         for d in data:
             d.update(base_meta)
@@ -449,7 +449,7 @@ class Model():
         bump_collection_version(cls.collection_name())
 
     @classmethod
-    async def update_or_create(cls: type[T], query: dict[str, any], data: dict[str, any]) -> T:
+    async def update_or_create(cls: type[T], query: dict[str, Any], data: dict[str, Any]) -> T:
         instance = await cls.find_one(query)
         if instance:
             await instance.update(data)
@@ -460,11 +460,11 @@ class Model():
     def is_dirty(self, key: str) -> bool:
         return key in self.clean
 
-    def get(self, key: str, default: any = None) -> any:
+    def get(self, key: str, default: Any = None) -> Any:
         attr = getattr(self, key, default)
         return attr if attr is not None else default
 
-    def set(self, key: str, value: any) -> None:
+    def set(self, key: str, value: Any) -> None:
         if not self.is_dirty(key):
             self.clean[key] = self.get(key)
         setattr(self, key, value)
@@ -473,7 +473,7 @@ class Model():
     def id(self) -> Optional[ObjectId]:
         return self._id
 
-    def __setattr__(self, key: str, value: any) -> None:
+    def __setattr__(self, key: str, value: Any) -> None:
         """Override the default setattr to track changes to the model."""
         if key in self.model_fields().keys():
             if not self.is_dirty(key):
@@ -487,7 +487,7 @@ class Model():
         return data
 
     @classmethod
-    async def query_modifier(cls, query: dict = None, function_name: str = None, model_name: str = None) -> dict:
+    async def query_modifier(cls, query: dict, function_name: str = None, model_name: str = None) -> dict:
         return query
     
     @classmethod
@@ -535,4 +535,3 @@ class Model():
             return []
 
         return await child_model.find({child_key: self._get_object_id(parent_key)}, sort=[("_id", -1)])
-
