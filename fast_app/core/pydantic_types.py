@@ -109,6 +109,23 @@ def _to_int(value: object) -> int:
     raise ValueError("Invalid integer")
 
 
+def _to_hex_color(value: object) -> str:
+    if isinstance(value, str):
+        color = value.strip()
+        if not color:
+            raise ValueError("Color must be a valid hex code (e.g. #FF5733).")
+        if color.startswith("#"):
+            color = color[1:]
+        if len(color) not in (3, 6):
+            raise ValueError("Color must be a valid hex code (e.g. #FF5733).")
+        try:
+            int(color, 16)
+        except ValueError as exc:
+            raise ValueError("Color must be a valid hex code (e.g. #FF5733).") from exc
+        return f"#{color}"
+    raise ValueError("Color must be a valid hex code (e.g. #FF5733).")
+
+
 JSONField = Annotated[
     Any,
     BeforeValidator(_extract_json),
@@ -146,6 +163,11 @@ IntFromStrField = Annotated[
     BeforeValidator(_to_int),
 ]
 
+HexColorField = Annotated[
+    str,
+    BeforeValidator(_to_hex_color),
+]
+
 ShortStr = Annotated[
     str,
     StringConstraints(
@@ -162,7 +184,7 @@ __all__ = [
     "DateField",
     "DateTimeField",
     "IntFromStrField",
+    "HexColorField",
     "ShortStr",
 ]
-
 
