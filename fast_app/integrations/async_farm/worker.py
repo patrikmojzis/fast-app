@@ -74,8 +74,8 @@ class AsyncFarmWorker:
         logging.debug("[WORKER] Starting farm worker...")
         self.connection = await aio_pika.connect_robust(RABBITMQ_URL)
 
-        await self.setup_job_listener()
         await self.setup_control()
+        await self.setup_job_listener()
 
         loop = asyncio.get_running_loop()
         try:
@@ -167,6 +167,9 @@ class AsyncFarmWorker:
     # ------------------------- publishers -------------------------
     async def publish_to_supervisor(self, body: dict) -> None:
         if not self.supervisor_id:
+            return
+        if not self.worker_to_supervisor_exchange:
+            logging.error("Error publishing to supervisor: control exchange not initialized")
             return
 
         body = json.dumps(body).encode("utf-8")
@@ -363,5 +366,4 @@ def _run() -> None:
 
 if __name__ == "__main__":
     _run()
-
 
