@@ -3,7 +3,11 @@ from __future__ import annotations
 from inspect import signature, Parameter
 from typing import Any, Awaitable, Callable, Optional, Type, TYPE_CHECKING
 
+from bson import ObjectId
+
 from fast_app.contracts.middleware import Middleware
+from fast_app.exceptions import UnprocessableEntityException
+
 if TYPE_CHECKING:
     from fast_app.contracts.model import Model as ModelBase
 
@@ -65,6 +69,10 @@ class ModelBindingMiddleware(Middleware):
             # If no id present, skip binding for this parameter
             if id_value is None:
                 continue
+
+            # If not valid ObjectId
+            if not ObjectId.is_valid(id_value):
+                raise UnprocessableEntityException(error_type="invalid_object_id", message=f"{id_value} is not valid ObjectId")
 
             # Resolve model instance
             instance = await model_class.find_by_id_or_fail(id_value)
