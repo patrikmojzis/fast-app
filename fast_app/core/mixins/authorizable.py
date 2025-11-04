@@ -1,5 +1,5 @@
 import inspect
-from typing import Union, Callable, Optional, TYPE_CHECKING
+from typing import Union, Callable, Optional, TYPE_CHECKING, Awaitable
 
 from fast_app.exceptions.http_exceptions import ForbiddenException
 
@@ -17,7 +17,7 @@ class Authorizable:
     async def can(
         self, 
         ability: str,
-        target: Union['Model', type]
+        target: Union['Model', type['Model']]
     ) -> bool:
         """
         Check if the user can perform an action.
@@ -49,7 +49,7 @@ class Authorizable:
             return before_result
             
         # Try to get the policy method
-        policy_method = getattr(policy, ability, None)
+        policy_method: Optional[Callable[..., Awaitable[bool]]] = getattr(policy, ability, None)
         if not policy_method or not callable(policy_method):
             # If method doesn't exist, default to deny
             return False
@@ -59,13 +59,13 @@ class Authorizable:
             # Instance: pass instance as first param, user as second
             return await policy_method(model_instance, self)
         else:
-            # Class: pass user as first param only
+            # Class: pass user as the only param
             return await policy_method(None, self)
     
     async def cannot(
         self, 
         ability: str,
-        target: Union['Model', type]
+        target: Union['Model', type['Model']]
     ) -> bool:
         """
         Check if the user cannot perform an action.
@@ -82,7 +82,7 @@ class Authorizable:
     async def authorize(
         self, 
         ability: str,
-        target: Union['Model', type],
+        target: Union['Model', type['Model']],
     ) -> None:
         """
         Authorize user to perform an action. Raises HttpException if not authorized.
