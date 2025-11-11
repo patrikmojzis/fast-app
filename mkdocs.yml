@@ -7,6 +7,7 @@ nav:
   - Basic API:
       - Routes: routes.md
       - Models: models.md
+      - Factories: factories.md
       - Schemas: schemas.md
       - Observers: observers.md
       - Policies: policies.md
@@ -32,4 +33,3 @@ nav:
       - Integrations: integrations.md
 theme:
   name: material
-

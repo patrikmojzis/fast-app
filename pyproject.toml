@@ -57,7 +57,6 @@ dev = [
     "pytest-asyncio>=0.20.0",
     "pytest-cov>=4.0.0",
     "Faker>=15.0.0",
-    "factory_boy>=3.2.0",
     "black>=25.9.0",
     "isort>=6.1.0",
     "mypy>=1.17.1",

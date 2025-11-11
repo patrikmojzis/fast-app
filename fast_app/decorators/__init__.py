@@ -4,6 +4,7 @@ from .middleware_decorator import middleware
 from .model_decorators import (
     register_observer,
     register_policy,
+    register_factory,
     register_search_relation,
     authorizable,
     notifiable,
@@ -17,6 +18,7 @@ __all__ = [
     "middleware",
     "register_observer",
     "register_policy",
+    "register_factory",
     "register_search_relation",
     "authorizable",
     "notifiable",

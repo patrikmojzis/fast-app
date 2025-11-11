@@ -6,6 +6,7 @@ from fast_app.core.mixins.routes_notifications import RoutesNotifications
 
 if TYPE_CHECKING:  # pragma: no cover - imported for type checking only
     from fast_app import Policy, Observer
+    from fast_app.contracts.factory import Factory
 
 T = TypeVar('T')
 
@@ -26,6 +27,13 @@ def register_observer(observer_cls: type['Observer']):
 def register_policy(policy_cls: type['Policy']):
     def decorator(model_cls):
         model_cls.policy = policy_cls()
+        return model_cls
+    return decorator
+
+
+def register_factory(factory_cls: type['Factory']):
+    def decorator(model_cls):
+        model_cls.factory = factory_cls(model_cls)
         return model_cls
     return decorator
 

@@ -1,14 +1,16 @@
-import factory
+from typing import TYPE_CHECKING
+
+from fast_app.contracts.factory import Factory
 
 # Adjust import to your target model
-from app.models.model import Model
+if TYPE_CHECKING:  # pragma: no cover - template typing aid
+    from app.models.model import Model
 
 
-class NewClass(factory.Factory):
-    class Meta:
-        model = Model
+class NewClassFactory(Factory['Model']):
 
     # Define default attributes here
-    # example_field = factory.Faker('name')
-
-
+    # example_field = Faker("name")
+    # constant_field = Value("Always the same")
+    # computed_field = Function(lambda: "value")
+    ...

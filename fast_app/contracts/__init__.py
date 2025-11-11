@@ -5,21 +5,22 @@ they can be imported directly from :mod:`fast_app`.
 """
 
 from .broadcast_event import BroadcastEvent
+from .command import Command
 from .event import Event
 from .event_listener import EventListener
+from .factory import Factory
 from .middleware import Middleware
+from .migration import Migration
 from .model import Model
 from .notification import Notification
 from .notification_channel import NotificationChannel
 from .observer import Observer
 from .policy import Policy
 from .resource import Resource
-from .route import Route
-from .storage_driver import StorageDriver
-from .command import Command
 from .room import Room
+from .route import Route
 from .seeder import Seeder
-from .migration import Migration
+from .storage_driver import StorageDriver
 
 __all__ = [
     "BroadcastEvent",
@@ -38,4 +39,5 @@ __all__ = [
     "Room",
     "Seeder",
     "Migration",
+    "Factory",
 ]

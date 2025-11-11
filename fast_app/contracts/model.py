@@ -1,7 +1,7 @@
 # app/models/model.py
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, TypeVar, ClassVar, Any, get_type_hints, get_origin, Self, Union
+from typing import Optional, TypeVar, ClassVar, Any, get_type_hints, get_origin, Self
 from typing import TYPE_CHECKING
 
 from bson import ObjectId
@@ -11,17 +11,18 @@ from fast_app.database.mongo import get_db
 from fast_app.decorators.db_cache_decorator import cached_db_retrieval
 from fast_app.exceptions.common_exceptions import DatabaseNotInitializedException
 from fast_app.exceptions.model_exceptions import ModelNotFoundException
+from fast_app.utils.datetime_utils import now
 from fast_app.utils.model_utils import build_search_query_from_string
 from fast_app.utils.query_builder import QueryBuilder
 from fast_app.utils.serialisation import serialise
 from fast_app.utils.versioned_cache import bump_collection_version
-from fast_app.utils.datetime_utils import now
 
 if TYPE_CHECKING:
-    from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorCommandCursor, AsyncIOMotorCursor
+    from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorCommandCursor
     from fast_app import Observer
     from fast_app.contracts.policy import Policy
 
+from fast_app.contracts.factory import Factory
 
 T = TypeVar('T', bound='Model')
 
@@ -34,6 +35,7 @@ class Model:
     _cached_model_fields: ClassVar[Optional[dict[str, Any]]] = None
     _cached_fillable_fields: ClassVar[Optional[list[str]]] = None
     _cached_all_fields: ClassVar[Optional[list[str]]] = None
+    factory: ClassVar[Optional[Factory[T]]] = None
 
     search_relations: ClassVar[list[dict[str, str]]] = []  # Example: [{"field": "user_id", "model": "User", "search_fields": ["name"]}]
     search_fields: ClassVar[Optional[list[str]]] = None
@@ -77,7 +79,7 @@ class Model:
 
     @classmethod
     @cached_db_retrieval()
-    async def exec_find(cls, *args, **kwargs) -> 'AsyncIOMotorCursor':
+    async def exec_find(cls, *args, **kwargs) -> list[dict]:
         cursor = (await cls.collection_cls()).find(*args, **kwargs)
         return [d async for d in cursor]
 
@@ -110,9 +112,6 @@ class Model:
                 for name, hint in base_hints.items():
                     # Skip ClassVar annotations and internal control fields
                     if get_origin(hint) is ClassVar:
-                        continue
-
-                    if name in ("protected", "policy", "search_relations", "search_fields"):  # May be redundant
                         continue
                     annotations[name] = hint
 
@@ -382,7 +381,7 @@ class Model:
         return await cls.find_one({}, **kwargs)
 
     @classmethod
-    async def find_one_or_create(cls: type[T], query: dict[str, Any], data: Optional[dict[str, Any]] = None) -> T:
+    async def first_or_create(cls: type[T], query: dict[str, Any], data: Optional[dict[str, Any]] = None) -> T:
         if data is None:
             data = {}
             

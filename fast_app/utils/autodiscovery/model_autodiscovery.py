@@ -3,7 +3,7 @@ import inspect
 import logging
 from pathlib import Path
 
-from fast_app.decorators import register_observer, register_policy
+from fast_app.decorators import register_observer, register_policy, register_factory
 
 
 def autodiscover_models() -> None:
@@ -22,7 +22,7 @@ def autodiscover_models() -> None:
         observers_dir: The directory containing the observers.
         policies_dir: The directory containing the policies.
     """
-    from fast_app import Model, Observer, Policy
+    from fast_app import Model, Observer, Policy, Factory
 
     models_dir = Path("app/models")
     
@@ -33,7 +33,8 @@ def autodiscover_models() -> None:
     # Define discovery mappings for better performance
     discovery_config = [
         ("observers", "Observer", Observer, register_observer),
-        ("policies", "Policy", Policy, register_policy)
+        ("policies", "Policy", Policy, register_policy),
+        ("db.factories", "Factory", Factory, register_factory),
     ]
     
     discovered_count = 0
@@ -68,7 +69,7 @@ def autodiscover_models() -> None:
                         if (hasattr(target_module, target_class_name) and 
                             inspect.isclass(target_cls := getattr(target_module, target_class_name)) and
                             issubclass(target_cls, base_class)):
-                            
+
                             decorator(target_cls)(model_cls)
                             logging.debug(f"✅ Auto-registered {target_class_name} for {class_name}")
                             

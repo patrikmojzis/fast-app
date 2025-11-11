@@ -38,6 +38,7 @@ from .contracts import (
     Room,
     Seeder,
     Migration,
+    Factory,
 )
 from .core import (
     get_client_ip,
@@ -79,6 +80,7 @@ from .decorators import (
     middleware,
     register_observer,
     register_policy,
+    register_factory,
     register_search_relation,
     authorizable,
     notifiable,
@@ -108,6 +110,7 @@ __all__ = [
     "Room",
     "Seeder",
     "Migration",
+    "Factory",
     # core
     "get_client_ip",
     "get_mongo_filter_from_query",
@@ -132,10 +135,8 @@ __all__ = [
     "trans",
     "trans_choice",
     "queue",
-    "SimpleController",
     "Stopwatch",
     "Storage",
-    "DiskStorage",
     "ExistsValidatorRule",
     "context",
     "define_key",
@@ -149,6 +150,7 @@ __all__ = [
     "middleware",
     "register_observer",
     "register_policy",
+    "register_factory",
     "register_search_relation",
     "authorizable",
     "notifiable",
