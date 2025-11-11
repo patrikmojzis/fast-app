@@ -1,5 +1,4 @@
 from typing import Any, Callable, Mapping, Optional, Union, List
-from typing_extensions import deprecated
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -97,7 +96,7 @@ class Route(BaseModel):
             if handler is None or not callable(handler):
                 controller_name = getattr(controller, "__name__", controller.__class__.__name__)
                 raise AttributeError(
-                    f"Controller '{controller_name}' is missing callable '{attribute_name}' for resource action '{action}'."
+                    f"Controller '{controller_name}' is missing callable '{attribute_name}' for resource action '{methods}'."
                 )
 
             route_path = "" if not needs_identifier else f"/<{param_name}>"
