@@ -1,6 +1,6 @@
 import asyncio
 
-import fast_app.boot
+import fast_app.boot  # noqa: F401
 from fast_app.core.scheduler import run_scheduler
 
 if __name__ == "__main__":

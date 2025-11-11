@@ -1,10 +1,9 @@
 import os
 
 import pytest_asyncio
-
-import fast_app.boot
-
 from app.modules.asgi.quart import create_quart_app
+
+import fast_app.boot  # noqa: F401
 
 
 @pytest_asyncio.fixture(scope="function")

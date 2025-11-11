@@ -3,7 +3,7 @@ FastApp — Agent Quick Notes
 - Purpose & scope: Async, Laravel‑inspired toolkit for HTTP APIs. Core: routes, schemas, models, resources, middleware, events; optional batteries: queue, scheduler, broadcasting, notifications, storage, CLI.
 - Supported env: Python 3.12+, Quart, Motor (MongoDB). Optional: Redis (cache/socketio/scheduler), RabbitMQ (`async_farm` queue).
 - Runtime deps: Minimal to run API: Mongo (`MONGO_URI`), `SECRET_KEY`. Optional: Redis, RabbitMQ.
-- Config: `import fast_app.boot` first. Reads `.env`/`.env.{ENV}`; key vars: `MONGO_URI`, `SECRET_KEY`, `ENV`, `DB_NAME`, `QUEUE_DRIVER`, `REDIS_*`, `RABBITMQ_URL`. See `docs/enviroment.md`.
+- Config: `import fast_app.boot  # noqa: F401` first. Reads `.env`/`.env.{ENV}`; key vars: `MONGO_URI`, `SECRET_KEY`, `ENV`, `DB_NAME`, `QUEUE_DRIVER`, `REDIS_*`, `RABBITMQ_URL`. See `docs/enviroment.md`.
 - Project layout: `app/http_files/{routes,controllers,schemas,resources,middlewares}`, `app/models`, optional `app/app_config.py`. Entry: `app/modules/asgi/app.py`. See `docs/quick_start.md`.
 - Request lifecycle: `Route → middlewares → controller → schema/validation → model → resource`. Global middlewares include exception handling, model binding, schema validation, `ResourceResponseMiddleware`.
 - Autodiscovery: Enabled by `boot()`/`app_config.py`. Auto-registers observers/policies/events by naming/location. See `fast_app/boot.py`.

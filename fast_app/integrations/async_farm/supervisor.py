@@ -2,20 +2,19 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import os
 import signal
+import sys
 import time
 from multiprocessing import Process
 from typing import Dict, List, Optional, TypedDict
-import sys
 
 import aio_pika
 from aio_pika import ExchangeType
 
+import fast_app.boot  # noqa: F401
 from fast_app.utils.async_farm_utils import await_processes_death, decode_message
-# from fast_app.app_provider import boot
-import fast_app.boot
+
 
 class WorkerState(TypedDict):
     process: Process

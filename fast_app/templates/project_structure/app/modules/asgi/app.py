@@ -1,4 +1,4 @@
-import fast_app.boot
+import fast_app.boot  # noqa: F401
 
 # Use simple quart app
 from .quart import create_quart_app

@@ -2,27 +2,19 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
-import pickle
-import signal
-import time
 import logging
-from dataclasses import dataclass, field
+import os
+import signal
 import sys
-from typing import Any, Callable, Optional, Set, List, Dict
+import time
+from typing import Any, Optional, Set, List, Dict
 
 import aio_pika
 from aio_pika import ExchangeType, Message
 
-from fast_app.utils.queue_utils import import_from_path
-from fast_app.core.context import context
-from fast_app.utils.serialisation import safe_int
-from fast_app.utils.logging import setup_logging
-from fast_app.utils.async_farm_utils import decode_message, AckGuard
-# from fast_app.app_provider import boot
+import fast_app.boot  # noqa: F401
 from fast_app.integrations.async_farm.task import Task
-import fast_app.boot
-
+from fast_app.utils.async_farm_utils import decode_message
 
 # Environment configuration with sensible defaults
 RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
