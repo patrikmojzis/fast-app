@@ -1,24 +1,19 @@
 #!/bin/bash
-
 # Fix log directory permissions for Docker deployment
-# This ensures the mounted log directory is writable by the container user
+# Ensures the mounted log directory is writable by the container user (UID 999 by default)
 
-LOG_DIR="/log"
+LOG_DIR="./log"
+CONTAINER_UID=999
+CONTAINER_GID=999
 
-# Resolve default log file name from env (defaults to app.log)
-LOG_FILE_NAME="${LOG_FILE_NAME:-app.log}"
-
-# Create log directory if it doesn't exist
+# Create directory and file if they don’t exist
 mkdir -p "$LOG_DIR"
+touch "$LOG_DIR/app.log"
 
-# Set permissions to be writable by any user (Docker containers often have different UIDs)
-chmod 777 "$LOG_DIR"
+# Set correct ownership and minimal needed permissions
+sudo chown -R $CONTAINER_UID:$CONTAINER_GID "$LOG_DIR"
+chmod 755 "$LOG_DIR"
+chmod 644 "$LOG_DIR/app.log"
 
-# Ensure default log file exists and set permissions
-touch "$LOG_DIR/$LOG_FILE_NAME"
-
-# Set 666 on all .log files in the log directory
-chmod 666 "$LOG_DIR"/*.log 2>/dev/null || true
-
-echo "Log directory permissions fixed: $LOG_DIR"
+echo "✅ Log directory ready with UID:GID $CONTAINER_UID:$CONTAINER_GID"
 ls -la "$LOG_DIR"

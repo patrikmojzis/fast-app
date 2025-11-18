@@ -1,31 +1,31 @@
 FROM python:3.12-slim
 
-# Set working directory
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
+    ca-certificates \
     libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better Docker layer caching
-COPY requirements.txt .
+ARG APP_UID=999
+ARG APP_GID=999
+RUN groupadd -g "$APP_GID" -r appuser \
+ && useradd  -u "$APP_UID" -g "$APP_GID" -m -r appuser
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN mkdir -p /app/log /app/storage
 
-# Copy application code
-COPY . .
+COPY --chown=appuser:appuser requirements.txt /app/requirements.txt
 
-# Make scripts executable
-RUN chmod +x /app/scripts/*.sh
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
+COPY --chown=appuser:appuser . /app
+
+RUN chmod +x /app/scripts/*.sh || true
+
 USER appuser
-
-# Set Python path
 ENV PYTHONPATH=/app
