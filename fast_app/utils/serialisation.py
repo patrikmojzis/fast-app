@@ -98,7 +98,7 @@ def is_pascal_case(name: str) -> bool:
 
 
 def get_exception_error_type(exception: Exception) -> str:
-    return pascal_case_to_snake_case(exception.__class__.__name__.lower().replace('exception', ''))
+    return pascal_case_to_snake_case(exception.__class__.__name__.replace('Exception', ''))
 
 
 def remove_suffix(text: str, suffix: str) -> str:
