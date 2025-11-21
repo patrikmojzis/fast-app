@@ -121,6 +121,6 @@ class IncompleteController:
 def test_resource_requires_all_actions() -> None:
     controller = IncompleteController()
 
-    with pytest.raises(AttributeError, match="resource action 'show'"):
+    with pytest.raises(AttributeError, match="'show' for resource action"):
         Route.resource("/lead", controller)
 
