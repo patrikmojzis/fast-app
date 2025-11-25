@@ -63,18 +63,15 @@ class Boto3Driver(StorageDriver):
         if content_type:
             extra_args["ContentType"] = content_type
 
-        try:
-            if isinstance(content, str):
-                content = content.encode("utf-8")
-            if isinstance(content, bytes):
-                from io import BytesIO
+        if isinstance(content, str):
+            content = content.encode("utf-8")
+        if isinstance(content, bytes):
+            from io import BytesIO
+            content = BytesIO(content)
 
-                content = BytesIO(content)
+        self._client.upload_fileobj(content, self.bucket, key, ExtraArgs=extra_args)
+        return key
 
-            self._client.upload_fileobj(content, self.bucket, key, ExtraArgs=extra_args)
-            return key
-        except Exception as e:
-            raise Exception(f"Failed to upload: {str(e)}") from e
 
     async def delete(self, path: Union[str, List[str]]) -> bool:
         keys = [path] if isinstance(path, str) else path

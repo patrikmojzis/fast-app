@@ -4,6 +4,7 @@ from typing import Dict, IO, List, Optional, Union
 from fast_app import StorageDriver
 from fast_app.utils.datetime_utils import now
 
+
 class NewClass(StorageDriver):
     async def exists(self, path: str) -> bool:
         return False
@@ -11,7 +12,7 @@ class NewClass(StorageDriver):
     async def get(self, path: str) -> bytes:
         return b""
 
-    async def put(self, path: str, content: Union[str, bytes, IO]) -> str:
+    async def put(self, path: str, content: Union[str, bytes, IO], **kwargs) -> str:
         return path
 
     async def delete(self, path: Union[str, List[str]]) -> bool:

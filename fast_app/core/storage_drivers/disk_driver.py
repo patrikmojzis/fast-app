@@ -38,7 +38,7 @@ class DiskDriver(StorageDriver):
             raise FileNotFoundError(f"File not found: {path}")
         return file_path.read_bytes()
 
-    async def put(self, path: str, content: Union[str, bytes, IO]) -> str:
+    async def put(self, path: str, content: Union[str, bytes, IO], **kwargs) -> str:
         secure = self._secure(path)
         file_path = self._full(secure)
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -152,14 +152,13 @@ class DiskDriver(StorageDriver):
             abs_path,
             mimetype=content_type,
             as_attachment=not inline,
-            download_name=safe_name,
+            attachment_filename=safe_name,
             conditional=True,
-            max_age=max_age if max_age is not None else (3600 if inline else 0),
+            cache_timeout=max_age if max_age is not None else (3600 if inline else 0),
         )
         resp.headers["X-Content-Type-Options"] = "nosniff"
         if extra_headers:
             for k, v in extra_headers.items():
                 resp.headers[k] = v
         return resp
-
 

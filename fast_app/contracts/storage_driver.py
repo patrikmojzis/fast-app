@@ -22,6 +22,10 @@ class StorageDriver(ABC):
 
     @abstractmethod
     async def get(self, path: str) -> bytes:
+        """
+        Raises:
+            FileNotFoundError: If file does not exist
+        """
         pass
 
     @abstractmethod
