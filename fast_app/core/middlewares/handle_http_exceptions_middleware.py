@@ -6,8 +6,6 @@ from fast_app.contracts.middleware import Middleware
 from fast_app.exceptions import HttpException, ServerErrorException, ModelException
 from fast_app.exceptions.common_exceptions import AppException
 
-logger = logging.getLogger(__name__)
-
 
 class HandleHttpExceptionsMiddleware(Middleware):
     """Middleware for handling exceptions for HTTP requests."""
@@ -20,13 +18,13 @@ class HandleHttpExceptionsMiddleware(Middleware):
         except HttpException as e:
             return e.to_response()
         except AppException as e:
-            logger.exception("Application exception while handling request", exc_info=e)
+            logging.exception("Application exception while handling request", exc_info=e)
             if os.getenv("ENV") == "debug":
                 raise e
 
             return e.to_response()
         except Exception as e:
-            logger.exception("Unhandled exception while handling request", exc_info=e)
+            logging.exception("Unhandled exception while handling request", exc_info=e)
             if os.getenv("ENV") == "debug":
                 raise e
 
