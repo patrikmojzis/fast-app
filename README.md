@@ -52,6 +52,6 @@ register_routes(app, [
 - `fast-app migrate` / `fast-app seed`
 
 ## Docs & Links
-- Docs: [fast-app documentation](https://fast-app.patrikmojzis.com)
+- Docs: `mkdocs serve`
 - Repo: [github.com/patrikmojzis/fast-app](https://github.com/patrikmojzis/fast-app)
 - License: MIT
