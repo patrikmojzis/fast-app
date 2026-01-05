@@ -1,24 +1,19 @@
-import os
-import json
-from typing import TYPE_CHECKING, Optional, Literal, Any, Union, TypedDict
-import importlib
-
-import redis.asyncio as redis
+from typing import Optional, Any, Union, TypedDict
 
 from fast_app.contracts.resource import Resource
-from fast_app.utils.serialisation import serialise    
 from fast_app.contracts.room import Room
+from fast_app.utils.serialisation import serialise
 
 
 async def transform_broadcast_data(data: Any) -> dict:
     """Transform broadcast data from Resource or BaseModel, otherwise return the data as is."""  
     if isinstance(data, Resource):  
-        return await data.dump()
+        return serialise(await data.dump())
 
     if hasattr(data, "model_dump"):
-        return data.model_dump()
+        return serialise(data.model_dump())
     
-    return data
+    return serialise(data)
 
 
 class BroadcastOn(TypedDict):
