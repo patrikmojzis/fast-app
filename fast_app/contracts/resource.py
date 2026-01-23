@@ -1,6 +1,7 @@
 import asyncio
+import inspect
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Union, Any
+from typing import TYPE_CHECKING, Union, Any, Awaitable, Optional
 
 from quart import jsonify, Response
 
@@ -9,61 +10,79 @@ from fast_app.utils.serialisation import serialise
 if TYPE_CHECKING:
     from fast_app.contracts.model import Model
 
-class Resource(ABC):
+ModelT = "Model"
+DataT = Union[
+    "Model",
+    list["Model"],
+    None,
+    Awaitable[Optional["Model"]],
+    Awaitable[Optional[list["Model"]]],
+]
 
-    def __init__(self, data: Union['Model', list['Model'], None]):
+class Resource(ABC):
+    def __init__(self, data: DataT):
         """
-        Base class for all resources. Put Model or list[Model] in the constructor.
+        Base class for all resources.
+        Supports:
+          - Model | list[Model] | None
+          - Awaitable[Model | list[Model] | None]
         """
         self._data = data
 
     async def dump(self) -> dict | list[dict] | None:
-        """
-        Dump the resource to a dictionary or list of dictionaries.
-        """
-        if self._data is None:
+        data = await self._maybe_await(self._data)
+
+        if data is None:
             return None
 
-        if isinstance(self._data, list):
-            data = await asyncio.gather(*(self.to_dict(res) for res in self._data))
-        else:
-            data = await self.to_dict(self._data)
+        if isinstance(data, list):
+            # Build per-item dicts concurrently (if to_dict does I/O)
+            raw_items = await asyncio.gather(
+                *(self._maybe_await(self.to_dict(item)) for item in data)
+            )
+            resolved = await self._resolve(raw_items)
+            return serialise(resolved)
 
-        # Resolve any nested Resource instances concurrently
-        resolved = await self._resolve_resources(data)
+        raw = await self._maybe_await(self.to_dict(data))
+        resolved = await self._resolve(raw)
         return serialise(resolved)
 
-    async def _resolve_resources(self, value: Any) -> Any:
+    async def to_response(self) -> Response:
+        return jsonify(await self.dump())
+
+    async def _maybe_await(self, value: Any) -> Any:
+        """Helper to await a value if it's awaitable, otherwise return as-is."""
+        return await value if inspect.isawaitable(value) else value
+
+    async def _resolve(self, value: Any) -> Any:
         """
-        Recursively resolve nested Resource instances within dicts/lists in parallel.
+        Recursively resolve:
+          - awaitables (coroutines/futures/tasks)
+          - nested Resource instances
+          - dicts/lists containing either of the above
+        All collections resolve in parallel via asyncio.gather().
         """
-        # Direct Resource instance
+        # 1) awaitables first
+        if inspect.isawaitable(value):
+            return await self._resolve(await value)
+
+        # 2) Resource instances (which themselves may wrap awaitables)
         if isinstance(value, Resource):
             return await value.dump()
 
-        # Lists: resolve all items concurrently
+        # 3) lists
         if isinstance(value, list):
-            return await asyncio.gather(*(self._resolve_resources(item) for item in value))
+            return await asyncio.gather(*(self._resolve(v) for v in value))
 
-        # Dicts: resolve all values concurrently (preserve keys/order)
+        # 4) dicts (preserve key order)
         if isinstance(value, dict):
-            keys = list(value.keys())
-            resolved_vals = await asyncio.gather(*(self._resolve_resources(value[k]) for k in keys))
-            return {k: v for k, v in zip(keys, resolved_vals)}
+            items = list(value.items())
+            resolved_vals = await asyncio.gather(*(self._resolve(v) for _, v in items))
+            return {k: rv for (k, _), rv in zip(items, resolved_vals)}
 
-        # Primitives and everything else pass through
+        # 5) primitives/objects pass through
         return value
 
-    async def to_response(self) -> Response:
-        """
-        Return the resource as a Quart response.
-        """
-        return jsonify(await self.dump())
-
     @abstractmethod
-    async def to_dict(self, data: 'Model') -> dict:
-        """
-        Set up the resource to be dumped.
-        """
-        return data.dict()
-
+    async def to_dict(self, data: "Model") -> dict:
+        ...
