@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+RUN pip install --no-cache-dir uv
+
 ARG APP_UID=999
 ARG APP_GID=999
 RUN groupadd -g "$APP_GID" -r appuser \
@@ -22,7 +24,7 @@ RUN mkdir -p /app/log /app/storage
 
 COPY --chown=appuser:appuser requirements.txt /app/requirements.txt
 
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN uv pip install --system --no-cache -r /app/requirements.txt
 
 COPY --chown=appuser:appuser . /app
 
