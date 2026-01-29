@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     libmagic1 \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 ARG APP_UID=999
