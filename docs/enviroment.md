@@ -80,8 +80,8 @@ LOG_LEVEL=DEBUG          # defaults to INFO
 `fast_app/templates/project_structure/docker-compose.yml` reads from `.env.docker` and inlines some values:
 - `APP_NAME`: used for container and network naming. Default: `fast_app`.
 - `MAP_ASGI_PORT`: host→container port mapping for API (default host `8000`).
-- `MAP_REDIS_PORT`: host→container port mapping for Redis (default host `6379`).
 - Containers set `REDIS_HOST=redis` internally; you usually don’t override this inside the compose network.
+ - Redis and RabbitMQ ports are not published to the host by default (internal-only).
 
  
 
@@ -127,7 +127,6 @@ Docker (`.env.docker`):
 ```env
 APP_NAME=fast_app
 MAP_ASGI_PORT=8000
-MAP_REDIS_PORT=6379
 
 # App/runtime variables are also read inside containers via env_file
 # e.g., MONGO_URI, SECRET_KEY, etc.
@@ -136,5 +135,3 @@ MAP_REDIS_PORT=6379
 ### Notes
 - Keep secrets like `SECRET_KEY`, credentials, and webhooks out of version control.
 - Use the smallest possible `.env.*` files: required keys only; refer back to this page for all optional settings.
-
-

@@ -59,8 +59,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: "${APP_NAME:-fast_app}-redis"
-    ports:
-      - "${MAP_REDIS_PORT:-6379}:6379"
+    expose:
+      - "6379"
     restart: unless-stopped
     volumes:
       - redis_data:/data
@@ -77,9 +77,9 @@ services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: "${APP_NAME:-fast_app}-rabbitmq"
-    ports:
-      - "${MAP_RABBITMQ_PORT:-5672}:5672"    # AMQP port
-      - "${MAP_RABBITMQ_MANAGEMENT_PORT:-15672}:15672"  # Management UI port
+    expose:
+      - "5672"   # AMQP port
+      - "15672"  # Management UI port
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
