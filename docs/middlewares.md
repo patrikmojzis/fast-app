@@ -17,7 +17,7 @@ async def create_post():
 ```
 
 - Resolves the referenced target either by name (from bound kwargs) or class.
-- Raises `UnauthorisedException` when the user is missing or the policy denies.
+- Raises `UnauthorizedException` when the user is missing or the policy denies (deprecated: `UnauthorisedException`).
 - Ideal companion to `ModelBindingMiddleware` so instance checks receive the already-bound model.
 
 ## BelongsToMiddleware
@@ -66,4 +66,3 @@ async def sensitive_action():
 - Raises `TooManyRequestsException` when the limit is exceeded, returning a `429` response.
 
 Combine these middlewares as needed to layer authorisation, data protection, performance, and rate limiting policies on a per-route basis.
-

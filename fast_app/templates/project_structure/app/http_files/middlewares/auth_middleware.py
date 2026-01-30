@@ -1,5 +1,4 @@
 import asyncio
-from datetime import datetime
 from typing import Any, Callable, Awaitable
 
 from app.models.auth import Auth
@@ -12,7 +11,7 @@ from fast_app import (
     decode_token,
     ACCESS_TOKEN_TYPE,
 )
-from fast_app.exceptions import AuthException, UnauthorisedException
+from fast_app.exceptions import AuthException, UnauthorizedException
 from fast_app.utils.datetime_utils import now
 
 
@@ -23,23 +22,23 @@ class AuthMiddleware(Middleware):
         # Get bearer token from request header
         token = get_bearer_token()
         if not token:
-            raise UnauthorisedException()
+            raise UnauthorizedException()
 
         # Decode and validate JWT access token
         try:
             payload = decode_token(token, token_type=ACCESS_TOKEN_TYPE)
         except AuthException:
-            raise UnauthorisedException()
+            raise UnauthorizedException()
 
         # Find Auth by session ID
         auth = await Auth.find_one({'_id': ObjectId(payload.get("sid")), 'is_revoked': {"$ne": True}})
         if not auth:
-            raise UnauthorisedException()
+            raise UnauthorizedException()
             
         # Get user from database
         user = await auth.user()
         if not user:
-            raise UnauthorisedException()
+            raise UnauthorizedException()
             
         # Update last seen timestamp
         user, auth = await asyncio.gather(

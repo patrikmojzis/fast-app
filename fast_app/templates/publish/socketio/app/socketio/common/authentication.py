@@ -1,16 +1,15 @@
+import asyncio
+
+from app.models.auth import Auth
+from bson import ObjectId
+from socketio import AsyncServer, AsyncNamespace
 from socketio.exceptions import ConnectionRefusedError
+
 from fast_app import (
-    Middleware,
-    get_bearer_token,
     decode_token,
     ACCESS_TOKEN_TYPE,
 )
-from fast_app.exceptions import AuthException, UnauthorisedException
-from app.models.auth import Auth
-from bson import ObjectId
-from datetime import datetime
-import asyncio
-from socketio import AsyncServer, AsyncNamespace
+from fast_app.exceptions import AuthException
 from fast_app.utils.datetime_utils import now
 
 

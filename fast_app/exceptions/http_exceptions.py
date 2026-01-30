@@ -1,5 +1,6 @@
 from quart import jsonify
 
+from fast_app.decorators import deprecated
 from fast_app.utils.serialisation import serialise, get_exception_error_type
 
 
@@ -29,12 +30,19 @@ class HttpException(Exception):
     def to_response(self):
         return jsonify(serialise(self.dict())), self.status_code
 
-class UnauthorisedException(HttpException):
+
+class UnauthorizedException(HttpException):
     def __init__(self, **kwargs):
         super().__init__(
             status_code=401,
             **kwargs
         )
+
+
+@deprecated("Use UnauthorizedException instead.")
+class UnauthorisedException(UnauthorizedException):
+    pass
+
 
 class ServerErrorException(HttpException):
     def __init__(self, **kwargs):

@@ -61,7 +61,7 @@ def get_bearer_token() -> str | None:
         The token.
 
     Raises:
-        UnauthorisedException: If the request is not authenticated.
+        UnauthorizedException: If the request is not authenticated.
         AppException: If the request does not have request context.
     """
     if has_request_context():

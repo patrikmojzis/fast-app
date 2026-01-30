@@ -8,6 +8,12 @@ from .apple_auth_exceptions import (
     AppleTokenExpiredError,
     AppleTokenRevokeError,
 )
+from .auth_exceptions import (
+    AuthException,
+    InvalidTokenTypeException,
+    InvalidTokenException,
+    TokenExpiredException,
+)
 from .common_exceptions import (
     AppException,
     ValidationRuleException,
@@ -24,6 +30,7 @@ from .google_auth_exceptions import (
 )
 from .http_exceptions import (
     HttpException,
+    UnauthorizedException,
     UnauthorisedException,
     ServerErrorException,
     UnprocessableEntityException,
@@ -31,17 +38,10 @@ from .http_exceptions import (
     TooManyRequestsException,
     NotFoundException,
 )
-from .auth_exceptions import (
-    AuthException,
-    InvalidTokenTypeException,
-    InvalidTokenException,
-    TokenExpiredException,
-)
 from .model_exceptions import (
     ModelException,
     ModelNotFoundException,
 )
-
 
 __all__ = [
     # apple
@@ -65,6 +65,7 @@ __all__ = [
     "GoogleApiError",
     # http
     "HttpException",
+    "UnauthorizedException",
     "UnauthorisedException",
     "ServerErrorException",
     "UnprocessableEntityException",

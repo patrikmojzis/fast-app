@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, Literal, Optional, Union
+from typing import Any, Awaitable, Callable, Literal, Union
 
 from quart import g
 
+from fast_app import context
 from fast_app.contracts.middleware import Middleware
 from fast_app.core.context import ContextKey
-from fast_app.exceptions.http_exceptions import UnauthorisedException
-from fast_app import context
+from fast_app.exceptions.http_exceptions import UnauthorizedException
 
 
 class AuthorizeMiddleware(Middleware):
@@ -49,7 +49,7 @@ class AuthorizeMiddleware(Middleware):
             authorizable = context.get(self._authorizible_key)
 
         if not authorizable:
-            raise UnauthorisedException()
+            raise UnauthorizedException()
 
         # Resolve target if it is a kwarg reference
         resolved_target: Union[type, Any]
@@ -65,5 +65,4 @@ class AuthorizeMiddleware(Middleware):
         await authorizable.authorize(self._ability, resolved_target)
 
         return await next_handler(*args, **kwargs)
-
 
