@@ -321,5 +321,5 @@ def get_mongo_filter_from_query(
     except ValueError as exc:
         raise UnprocessableEntityException(
             error_type="invalid_query",
-            message=f"Invalid filter in query parameter '{param_name}': {exc}",
+            message=f"Invalid filter in query parameter '{param_name}'.",
         )
