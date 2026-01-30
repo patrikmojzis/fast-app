@@ -9,9 +9,9 @@ from pathlib import Path
 from types import ModuleType
 from typing import Callable, Optional, Any
 
-from fast_app.utils.serialisation import pascal_case_to_snake_case
 from fast_app.contracts.migration import Migration
-
+from fast_app.utils.file_utils import resolve_cli_path
+from fast_app.utils.serialisation import pascal_case_to_snake_case
 from .command_base import CommandBase
 
 
@@ -26,11 +26,20 @@ class MigrateCommand(CommandBase):
 
     def configure_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("name", help="Migration name (e.g., AddIndexToUsers)")
+        parser.add_argument(
+            "--path",
+            help="Override migrations directory (relative to project root)",
+        )
 
     def execute(self, args: argparse.Namespace) -> None:
         migration_name: str = args.name
         file_name = pascal_case_to_snake_case(migration_name)
-        migration_path = Path.cwd() / "app" / "db" / "migrations" / f"{file_name}.py"
+        try:
+            migrations_dir = resolve_cli_path(args.path, Path("app") / "db" / "migrations")
+        except ValueError as exc:
+            print(f"❌ {exc}")
+            return
+        migration_path = migrations_dir / f"{file_name}.py"
         if not migration_path.exists():
             print(f"❌ Migration not found: {migration_path}")
             return
@@ -105,5 +114,4 @@ class MigrateCommand(CommandBase):
             print(f"✅ Migration executed: {migration_name}")
         except Exception as exc:  # noqa: BLE001
             print(f"❌ Migration failed: {exc}")
-
 

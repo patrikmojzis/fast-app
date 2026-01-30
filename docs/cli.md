@@ -44,6 +44,12 @@ fast-app make middleware AuthMiddleware
 fast-app make observer UserObserver
 ```
 
+You can override the destination directory with `--path` (relative to the project root):
+
+```bash
+fast-app make observer UserObserver --path app/observers/custom
+```
+
 ### `fast-app publish`
 
 Copy optional packaged modules into your project.
@@ -64,6 +70,12 @@ fast-app migrate AddIndexToUsers
 
 The command loads the migration module, prefers classes implementing `fast_app.contracts.migration.Migration`, and falls back to legacy functions (`migrate()`, `run()`). It reports success or failure in the console.
 
+Override the migrations directory with `--path` (relative to the project root):
+
+```bash
+fast-app migrate AddIndexToUsers --path app/db/migrations
+```
+
 ### `fast-app seed`
 
 Execute a seeder from `app/db/seeders/<name>.py`.
@@ -73,6 +85,12 @@ fast-app seed UserSeeder
 ```
 
 Supports contract-based seeders (implementing `fast_app.contracts.seeder.Seeder`) and legacy `seed()` / `run()` functions.
+
+Override the seeders directory with `--path` (relative to the project root):
+
+```bash
+fast-app seed UserSeeder --path app/db/seeders
+```
 
 ### `fast-app serve`
 
@@ -112,6 +130,12 @@ fast-app exec reports:daily --date 2024-01-01
 - Auto-discovers classes extending `fast_app.Command` under `app/cli`.
 - Supports an optional `app.cli.provider.get_commands()` hook for manual registration.
 - Validates that command `execute()` methods are async; otherwise raises an error.
+
+Override the app command directory with `--path` (relative to the project root):
+
+```bash
+fast-app exec --list --path app/cli/admin
+```
 
 ### `fast-app version`
 

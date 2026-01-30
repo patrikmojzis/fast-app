@@ -4,6 +4,7 @@ import argparse
 import re
 from pathlib import Path
 
+from fast_app.utils.file_utils import resolve_cli_path
 from fast_app.utils.serialisation import (
     pascal_case_to_snake_case,
     snake_case_to_pascal_case,
@@ -11,7 +12,6 @@ from fast_app.utils.serialisation import (
     is_snake_case,
 )
 from .command_base import CommandBase
-
 
 TEMPLATES_PATH = Path(__file__).parent.parent / "templates"
 
@@ -52,6 +52,10 @@ class MakeCommand(CommandBase):
         """Configure make command arguments."""
         parser.add_argument("type", help="Type of file to create")
         parser.add_argument("name", help="Name for the file and class")
+        parser.add_argument(
+            "--path",
+            help="Override destination directory (relative to project root)",
+        )
     
     def execute(self, args: argparse.Namespace) -> None:
         """Create file from template."""
@@ -75,7 +79,12 @@ class MakeCommand(CommandBase):
             file_name = args.name if is_snake_case(args.name) else pascal_case_to_snake_case(class_name)
         
         content = self._process_template(template_path, args.type, class_name)
-        dest_file = self._get_destination(args.type, file_name)
+        try:
+            dest_dir = resolve_cli_path(args.path, self.TYPE_PATHS[args.type])
+        except ValueError as exc:
+            print(f"❌ {exc}")
+            return
+        dest_file = dest_dir / f"{file_name}.py"
         
         if dest_file.exists():
             print(f"❌ File exists: {dest_file}")
@@ -94,6 +103,3 @@ class MakeCommand(CommandBase):
         pattern = r'\bNewClass\b'
         return re.sub(pattern, class_name, content)
     
-    def _get_destination(self, file_type: str, file_name: str) -> Path:
-        """Get destination file path."""
-        return Path.cwd() / self.TYPE_PATHS[file_type] / f"{file_name}.py"

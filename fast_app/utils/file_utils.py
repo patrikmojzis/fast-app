@@ -228,6 +228,29 @@ def build_file_path(directory: str, filename: str, create_dirs: bool = False) ->
     return str(full_path)
 
 
+def resolve_cli_path(path: Optional[str], default_subpath: Union[str, Path]) -> Path:
+    """
+    Resolve a CLI --path override relative to the project root (cwd).
+
+    - If path is provided, it must be relative and stay within the project root.
+    - If not provided, default_subpath is used under the project root.
+    """
+    base = Path.cwd().resolve()
+
+    if path:
+        candidate = Path(path)
+        if candidate.is_absolute():
+            raise ValueError("--path must be relative to the project root")
+        resolved = (base / candidate).resolve()
+        try:
+            resolved.relative_to(base)
+        except ValueError as exc:
+            raise ValueError("--path must stay within the project root") from exc
+        return resolved
+
+    return base / default_subpath
+
+
 class FileStorageValidator:
     """
     Comprehensive file validator for uploads.

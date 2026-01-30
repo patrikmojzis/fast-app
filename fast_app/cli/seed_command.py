@@ -9,9 +9,9 @@ from pathlib import Path
 from types import ModuleType
 from typing import Callable, Optional, Any
 
-from fast_app.utils.serialisation import pascal_case_to_snake_case
 from fast_app.contracts.seeder import Seeder
-
+from fast_app.utils.file_utils import resolve_cli_path
+from fast_app.utils.serialisation import pascal_case_to_snake_case
 from .command_base import CommandBase
 
 
@@ -26,11 +26,20 @@ class SeedCommand(CommandBase):
 
     def configure_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("name", help="Seeder name (e.g., UserSeeder)")
+        parser.add_argument(
+            "--path",
+            help="Override seeders directory (relative to project root)",
+        )
 
     def execute(self, args: argparse.Namespace) -> None:
         seeder_name: str = args.name
         file_name = pascal_case_to_snake_case(seeder_name)
-        seeder_path = Path.cwd() / "app" / "db" / "seeders" / f"{file_name}.py"
+        try:
+            seeders_dir = resolve_cli_path(args.path, Path("app") / "db" / "seeders")
+        except ValueError as exc:
+            print(f"❌ {exc}")
+            return
+        seeder_path = seeders_dir / f"{file_name}.py"
         if not seeder_path.exists():
             print(f"❌ Seeder not found: {seeder_path}")
             return
@@ -102,5 +111,4 @@ class SeedCommand(CommandBase):
             print(f"✅ Seeder executed: {seeder_name}")
         except Exception as exc:  # noqa: BLE001
             print(f"❌ Seeder failed: {exc}")
-
 
