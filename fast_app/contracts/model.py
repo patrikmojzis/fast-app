@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from bson import ObjectId
 
+from fast_app.contracts.policy import Policy  # noqa: F401 - used for resolving forward refs in get_type_hints
 from fast_app.database.mongo import get_db
 from fast_app.decorators.db_cache_decorator import cached_db_retrieval
 from fast_app.exceptions.common_exceptions import DatabaseNotInitializedException
@@ -19,7 +20,6 @@ from fast_app.utils.versioned_cache import bump_collection_version
 if TYPE_CHECKING:
     from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorCommandCursor
     from fast_app import Observer
-    from fast_app.contracts.policy import Policy
 
 from fast_app.contracts.factory import Factory
 
