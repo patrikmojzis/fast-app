@@ -139,7 +139,6 @@ Typical request flow: `Route → Middlewares → Controller → Schema → Model
 - Check [Schemas](schemas.md) for validation patterns
 - Review [API Helpers](api.md) for pagination and filtering utilities
 - Set up [Queue](queue.md) for background jobs
-- Configure [Broadcasting](broadcasting_basics.md) for real-time features
+- Configure [Broadcasting](broadcasting.md) for real-time features
 
 FastApp follows Laravel-inspired conventions to keep your code organized and predictable. Dive into the sections above to unlock its full potential.
-
