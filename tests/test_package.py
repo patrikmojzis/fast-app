@@ -2,15 +2,17 @@
 Basic package tests to ensure FastApp can be imported and basic functionality works.
 """
 
-import pytest
 import asyncio
+
+import pytest
+
 import fast_app
 
 
 def test_package_version():
     """Test that package version is accessible."""
     assert hasattr(fast_app, '__version__')
-    assert fast_app.__version__ == "0.1.0"
+    assert fast_app.__version__ == "0.2.0"
 
 
 def test_package_author():
