@@ -21,6 +21,8 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
@@ -42,7 +44,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "typing_extensions>=4.0.0",
     "python-dateutil>=2.8.0",
-    "pydantic>=1.8.0",
+    "pydantic>=2.0.0",
     "PyJWT>=2.9.0",
     "aio-pika>=9.4.0",
     "hypercorn>=0.17.3",
@@ -130,7 +132,7 @@ addopts = [
 
 # mypy type checking
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

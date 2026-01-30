@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import inspect
 import time
 from typing import List, Type, Union, Callable, Any, Awaitable
 
@@ -63,6 +64,6 @@ def retry(
             
             raise last_exception
 
-        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+        return async_wrapper if inspect.iscoroutinefunction(func) else sync_wrapper
 
     return decorator 

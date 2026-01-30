@@ -1,8 +1,8 @@
-import asyncio
 import functools
 import hashlib
-import pickle
+import inspect
 import os
+import pickle
 from typing import Any, Callable, Optional
 
 from fast_app.utils.versioned_cache import get_collection_version, get_value, set_value
@@ -44,7 +44,7 @@ def cached_db_retrieval(namespace: Optional[str] = None) -> Callable:
 
         # Choose the async or sync wrapper based on whether the original function 
         # is a coroutine function.
-        if asyncio.iscoroutinefunction(func):
+        if inspect.iscoroutinefunction(func):
             return async_wrapper
         else:
             return sync_wrapper

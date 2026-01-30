@@ -1,12 +1,11 @@
 # app/models/model.py
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, TypeVar, ClassVar, Any, get_type_hints, get_origin, Self
+from typing import Optional, TypeVar, ClassVar, Any, get_type_hints, get_origin, Self, Dict
 from typing import TYPE_CHECKING
 
 from bson import ObjectId
 
-from fast_app.contracts.policy import Policy
 from fast_app.database.mongo import get_db
 from fast_app.decorators.db_cache_decorator import cached_db_retrieval
 from fast_app.exceptions.common_exceptions import DatabaseNotInitializedException
@@ -32,12 +31,12 @@ class Model:
     protected: ClassVar[list[str]] = ["_id", "created_at", "updated_at"]
 
     policy: ClassVar[Optional['Policy']] = None
-    _cached_model_fields: ClassVar[Optional[dict[str, Any]]] = None
+    _cached_model_fields: ClassVar[Optional[Dict[str, Any]]] = None
     _cached_fillable_fields: ClassVar[Optional[list[str]]] = None
     _cached_all_fields: ClassVar[Optional[list[str]]] = None
     factory: ClassVar[Optional[Factory[T]]] = None
 
-    search_relations: ClassVar[list[dict[str, str]]] = []  # Example: [{"field": "user_id", "model": "User", "search_fields": ["name"]}]
+    search_relations: ClassVar[Optional[list[Dict[str, str]]]] = None  # Example: [{"field": "user_id", "model": "User", "search_fields": ["name"]}]
     search_fields: ClassVar[Optional[list[str]]] = None
 
     _id: Optional[ObjectId] = None
@@ -248,7 +247,7 @@ class Model:
         # Use relations search only if searching text
         if isinstance(query, str):
             # Add unionWith for each relation to combine results with related lookups
-            for relation in cls.search_relations:
+            for relation in cls.search_relations or []:
                 related_model_name = relation["model"].lower()
                 foreign_key = relation["field"]
                 relation_fields = [field for field in relation.get("search_fields", []) if field]
