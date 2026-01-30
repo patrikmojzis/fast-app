@@ -1,6 +1,6 @@
 import pytest
-from quart import Quart, jsonify, g
 from pydantic import BaseModel
+from quart import Quart, jsonify
 
 from fast_app import Route, validate_query
 from fast_app.utils.routing_utils import register_routes
@@ -85,6 +85,21 @@ async def test_validate_query_lists_and_scalars():
 
 
 @pytest.mark.asyncio
+async def test_validate_query_ignores_unknown_params():
+    app = Quart(__name__)
+    routes = [Route.get('/items', read_items)]
+    register_routes(app, routes)
+    client = app.test_client()
+
+    resp = await client.get('/items?tags=a&unknown=1&active=true')
+    assert resp.status_code == 200
+    data = await resp.get_json()
+    assert 'unknown' not in data
+    assert data['tags'] == ['a']
+    assert data['active'] is True
+
+
+@pytest.mark.asyncio
 async def test_validate_query_invalid_type_raises_422():
     app = Quart(__name__)
     routes = [Route.get('/items', read_items)]
@@ -98,4 +113,3 @@ async def test_validate_query_invalid_type_raises_422():
 
 
  
-
