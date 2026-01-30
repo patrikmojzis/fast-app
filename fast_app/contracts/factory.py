@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import copy
-import importlib
-import sys
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Generic, Optional, TypeVar, TYPE_CHECKING
 
@@ -14,6 +12,7 @@ except ModuleNotFoundError:  # pragma: no cover
     _Faker = None  # type: ignore
 
 from fast_app.utils.datetime_utils import now
+from fast_app.utils.model_resolver import resolve_model_from_name
 
 if TYPE_CHECKING:  # pragma: no cover
     from fast_app.contracts.model import Model
@@ -205,41 +204,7 @@ class Factory(Generic[TModel], metaclass=FactoryMeta):
         return Model
 
     def _resolve_model_from_name(self, name: str, base: type) -> type["Model"]:
-        candidates = self._candidate_model_paths(name)
-        last_error: Optional[Exception] = None
-        for module_name, class_name in candidates:
-            try:
-                module = sys.modules.get(module_name) or importlib.import_module(module_name)
-            except Exception as exc:  # pragma: no cover - optional module paths
-                last_error = exc
-                continue
-            model_cls = getattr(module, class_name, None)
-            if isinstance(model_cls, type) and issubclass(model_cls, base):
-                return model_cls
-        raise ValueError(
-            f"Unable to resolve related model '{name}'. "
-            f"Tried modules {[c[0] for c in candidates]}."
-        ) from last_error
-
-    def _candidate_model_paths(self, name: str) -> list[tuple[str, str]]:
-        normalized = self._normalize_model_name(name)
-        module_paths: list[tuple[str, str]] = []
-        current_module = self._model.__module__
-        module_paths.append((current_module, normalized))
-        if "." in current_module:
-            base_module = current_module.rsplit(".", 1)[0]
-            module_paths.append((base_module, normalized))
-            module_paths.append((f"{base_module}.{name}", normalized))
-        module_paths.append((name, normalized))
-        module_paths.append((f"{name}.{normalized}", normalized))
-        return module_paths
-
-    @staticmethod
-    def _normalize_model_name(name: str) -> str:
-        parts = [part for part in name.replace("-", "_").split("_") if part]
-        if not parts:
-            return name
-        return "".join(part.capitalize() for part in parts)
+        return resolve_model_from_name(name, base=base, module_hint=self._model.__module__)
 
     def _resolve_factory_cls(
         self,

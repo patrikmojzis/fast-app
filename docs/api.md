@@ -36,7 +36,7 @@ class LeadIndexFilter(Schema):
 
     class Meta:
         rules = [
-            Schema.Rule("$.rep_id", [ExistsValidatorRule(Rep, allow_null=True)]),
+            Schema.Rule("$.rep_id", [ExistsValidatorRule(allow_null=True)]),
         ]
 
 # Route.get("/lead", lead_controller.index)
@@ -44,6 +44,8 @@ async def index(filter: LeadIndexFilter):
     # filter is validated automatically
     return await list_paginated(Lead, LeadResource, filter=filter)
 ```
+
+When you omit the model, `ExistsValidatorRule` infers it from the field name (e.g., `rep_id` → `Rep`).
 
 The helper intelligently collects query parameters:
 
@@ -100,7 +102,7 @@ class LeadIndexFilter(Schema):
 
     class Meta:
         rules = [
-            Schema.Rule("$.county_id", [ExistsValidatorRule(County, allow_null=True)]),
+            Schema.Rule("$.county_id", [ExistsValidatorRule(allow_null=True)]),
         ]
 
 async def index(filter: LeadIndexFilter):

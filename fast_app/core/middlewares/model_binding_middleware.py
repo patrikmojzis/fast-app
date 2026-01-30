@@ -7,6 +7,7 @@ from bson import ObjectId
 
 from fast_app.contracts.middleware import Middleware
 from fast_app.exceptions import UnprocessableEntityException
+from fast_app.utils.model_resolver import resolve_model_annotation
 
 if TYPE_CHECKING:
     from fast_app.contracts.model import Model as ModelBase
@@ -43,17 +44,7 @@ class ModelBindingMiddleware(Middleware):
 
         for param_name, param in params.items():
             annotation = param.annotation
-            model_class: Optional[Type['ModelBase']] = None
-
-            # Only consider explicitly annotated parameters
-            try:
-                # Import here to avoid circular import at module load time
-                from fast_app.contracts.model import Model as ModelBase  # local import
-                if isinstance(annotation, type) and issubclass(annotation, ModelBase):
-                    model_class = annotation  # type: ignore[assignment]
-            except Exception:
-                # Not a class or not a Model subclass
-                model_class = None
+            model_class: Optional[Type['ModelBase']] = resolve_model_annotation(annotation)  # type: ignore[assignment]
 
             if model_class is None:
                 continue
@@ -96,4 +87,3 @@ class ModelBindingMiddleware(Middleware):
                 updated_kwargs.pop(param_name, None)
 
         return await next_handler(*args, **updated_kwargs)
-

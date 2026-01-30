@@ -96,8 +96,8 @@ class LeadSchema(Schema):
 
     class Meta:
         rules = [
-            Schema.Rule("$.rep_id", [ExistsValidatorRule(Rep, allow_null=True)]),
-            Schema.Rule("$.county_id", [ExistsValidatorRule(County, allow_null=True)]),
+            Schema.Rule("$.rep_id", [ExistsValidatorRule(allow_null=True)]),
+            Schema.Rule("$.county_id", [ExistsValidatorRule(allow_null=True)]),
         ]
 ```
 
@@ -114,7 +114,7 @@ Framework helpers such as `fast_app.core.api.validate_request` call `await schem
 
 ## Built-in rules
 
-- `ExistsValidatorRule(model, *, db_key="_id", allow_null=False, is_object_id=True, each=False)` — verifies that IDs exist in the database. When `each=True`, every value in a list is checked.
+- `ExistsValidatorRule(model=None, *, field=None, db_key="_id", allow_null=False, is_object_id=True, each=False)` — verifies that IDs exist in the database. If `model` is omitted, the rule infers the model from the field name (e.g., `rep_id` → `Rep`). When `each=True`, every value in a list is checked.
 
 To write your own rule, subclass `fast_validation.validation_rule.ValidatorRule`:
 
@@ -148,5 +148,4 @@ Rules run sequentially for each matched value; collect errors are aggregated int
 - Keep schema modules small and reusable; share nested schemas (e.g., `LeadScheduleSchema`) across multiple resources.
 
 With schemas, you get strict structural validation from Pydantic plus async rule checks for cross-cutting invariants.
-
 
