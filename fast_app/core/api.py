@@ -3,18 +3,18 @@ from collections.abc import Mapping
 from typing import Any, Optional, Literal, TypeVar
 from typing import TYPE_CHECKING
 
+from fast_validation import ValidationRuleException, Schema
 from pydantic import ValidationError, BaseModel, Field
 from quart import request, has_request_context, g
 
 from fast_app.exceptions.common_exceptions import AppException
-from fast_validation import ValidationRuleException, Schema
 from fast_app.exceptions.http_exceptions import UnprocessableEntityException
 from fast_app.utils.api_filters import parse_user_filter
 from fast_app.utils.api_utils import is_list_type, collect_list_values
 from fast_app.utils.model_utils import build_search_query_from_string
 
 if TYPE_CHECKING:
-    from quart import Response
+    pass
 
 
 if TYPE_CHECKING:
@@ -190,6 +190,7 @@ async def validate_request(schema: type[S], *, partial: bool = False) -> S:
         # Only catch pydantic parsing here
         raise UnprocessableEntityException(
             error_type="invalid_request",
+            message="Request body validation failed.",
             data=_sanitize_pydantic_errors(e.errors()),
         )
 
@@ -205,7 +206,11 @@ async def validate_request(schema: type[S], *, partial: bool = False) -> S:
                     "msg": exc.message,
                     "type": exc.error_type,
                 }]
-                raise UnprocessableEntityException(error_type="invalid_request", data=errors)
+                raise UnprocessableEntityException(
+                    error_type="invalid_request",
+                    message="Request body validation failed.",
+                    data=errors,
+                )
 
     validated = instance.model_dump(exclude_unset=partial)
     g.validated = validated
@@ -257,6 +262,7 @@ async def validate_query(schema: type[S], *, partial: bool = False) -> S:
     except ValidationError as e:
         raise UnprocessableEntityException(
             error_type="invalid_query",
+            message="Query parameter validation failed.",
             data=_sanitize_pydantic_errors(e.errors()),
         )
 
@@ -272,7 +278,11 @@ async def validate_query(schema: type[S], *, partial: bool = False) -> S:
                     "msg": exc.message,
                     "type": exc.error_type,
                 }]
-                raise UnprocessableEntityException(error_type="invalid_query", data=errors)
+                raise UnprocessableEntityException(
+                    error_type="invalid_query",
+                    message="Query parameter validation failed.",
+                    data=errors,
+                )
 
     validated = instance.model_dump(exclude_unset=partial)
     g.validated_query = validated
@@ -309,4 +319,7 @@ def get_mongo_filter_from_query(
             allowed_ops=set(allowed_ops) if allowed_ops else None,
         )
     except ValueError as exc:
-        raise UnprocessableEntityException(error_type="invalid_query", message=str(exc))
+        raise UnprocessableEntityException(
+            error_type="invalid_query",
+            message=f"Invalid filter in query parameter '{param_name}': {exc}",
+        )

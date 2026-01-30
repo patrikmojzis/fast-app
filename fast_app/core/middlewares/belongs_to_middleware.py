@@ -72,10 +72,14 @@ class BelongsToMiddleware(Middleware):
         parent_identifier = getattr(parent, self._parent_key)
 
         if child_identifier is None or parent_identifier is None:
-            raise NotFoundException()
+            raise NotFoundException(
+                message="Related resource identifiers missing; cannot verify relationship.",
+            )
 
         if not self._identifiers_match(child_identifier, parent_identifier):
-            raise NotFoundException()
+            raise NotFoundException(
+                message=f"Relationship mismatch: '{self._child_name}' does not belong to '{self._parent_name}'.",
+            )
 
         return await next_handler(*args, **kwargs)
 
@@ -101,5 +105,4 @@ class BelongsToMiddleware(Middleware):
                 return value
 
         return value
-
 

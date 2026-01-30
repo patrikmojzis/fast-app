@@ -72,7 +72,12 @@ class ModelBindingMiddleware(Middleware):
 
             # If not valid ObjectId
             if not ObjectId.is_valid(id_value):
-                raise UnprocessableEntityException(error_type="invalid_object_id", message=f"{id_value} is not valid ObjectId")
+                source_key = id_key if id_key in updated_kwargs else param_name
+                message = (
+                    f"Invalid ObjectId for URL parameter '{source_key}': '{id_value}'. "
+                    "Model binding expects a MongoDB ObjectId from the route parameter."
+                )
+                raise UnprocessableEntityException(error_type="invalid_object_id", message=message)
 
             # Resolve model instance
             instance = await model_class.find_by_id_or_fail(id_value)
@@ -91,5 +96,4 @@ class ModelBindingMiddleware(Middleware):
                 updated_kwargs.pop(param_name, None)
 
         return await next_handler(*args, **updated_kwargs)
-
 

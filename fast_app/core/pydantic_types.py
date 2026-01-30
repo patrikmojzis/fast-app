@@ -36,7 +36,7 @@ def _to_object_id(value: object) -> Optional[ObjectId]:
         return value  # type: ignore[return-value]
     if isinstance(value, str) and ObjectId.is_valid(value):
         return ObjectId(value)
-    raise ValueError("Invalid ObjectId")
+    raise ValueError("Invalid ObjectId (expected 24-character hex string).")
 
 
 def _to_date(value: object) -> date:
@@ -56,7 +56,7 @@ def _to_date(value: object) -> date:
                     return datetime.fromisoformat(s_norm).date()
                 except ValueError:
                     pass
-    raise ValueError("Invalid date")
+    raise ValueError("Invalid date (expected YYYY-MM-DD or ISO 8601 datetime).")
 
 
 def _to_datetime(value: object) -> datetime:
@@ -73,7 +73,7 @@ def _to_datetime(value: object) -> datetime:
             return datetime.fromisoformat(s)
         except ValueError:
             pass
-    raise ValueError("Invalid datetime")
+    raise ValueError("Invalid datetime (expected ISO 8601, e.g. 2025-01-30T12:34:56Z).")
 
 
 def _extract_json(value: Any) -> Any:
@@ -93,20 +93,20 @@ def _extract_json(value: Any) -> Any:
 def _to_int(value: object) -> int:
     # Coerce common representations to int, rejecting non-integral floats and booleans
     if isinstance(value, bool):
-        raise ValueError("Invalid integer")
+        raise ValueError("Invalid integer (expected whole number).")
     if isinstance(value, int):
         return value
     if isinstance(value, float):
         if value.is_integer():
             return int(value)
-        raise ValueError("Invalid integer")
+        raise ValueError("Invalid integer (expected whole number).")
     if isinstance(value, str):
         s = "".join(value.split())  # Remove all whitespace
         try:
             return int(s)
         except (TypeError, ValueError):
             pass
-    raise ValueError("Invalid integer")
+    raise ValueError("Invalid integer (expected whole number).")
 
 
 def _to_hex_color(value: object) -> str:
@@ -187,4 +187,3 @@ __all__ = [
     "HexColorField",
     "ShortStr",
 ]
-

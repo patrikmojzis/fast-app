@@ -15,4 +15,4 @@ class HandleExceptionsMiddleware(Middleware):
     async def handle(self, next_handler: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:
         if has_request_context():
             return await self.http_handler.handle(next_handler, *args, **kwargs)
-        raise Exception("Requires request context.")
+        raise Exception("HandleExceptionsMiddleware requires a Quart request context.")

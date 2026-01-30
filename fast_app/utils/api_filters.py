@@ -27,7 +27,7 @@ def _try_parse_json(value: str) -> Any:
             raw = base64.urlsafe_b64decode(value + padding).decode("utf-8")
             return json.loads(raw)
         except Exception as exc:  # noqa: BLE001 - keep broad but contained
-            raise ValueError("Invalid filter JSON (or base64-encoded JSON)") from exc
+            raise ValueError("Invalid filter JSON (expected JSON object or base64-encoded JSON)") from exc
 
 
 def _is_allowed_field(path: str, allowed_fields: set[str] | None) -> bool:
@@ -60,12 +60,12 @@ def _sanitize(
                 out[key] = _sanitize(value, allowed_ops=allowed_ops, allowed_fields=allowed_fields)
             else:
                 if not isinstance(key, str):
-                    raise ValueError("Invalid field in filter")
+                    raise ValueError("Invalid field name in filter (expected string)")
                 if not _is_allowed_field(key, allowed_fields):
                     raise ValueError(f"Field not allowed: {key}")
                 out[key] = _sanitize(value, allowed_ops=allowed_ops, allowed_fields=allowed_fields)
         return out
-    raise ValueError("Unsupported value in filter")
+    raise ValueError("Unsupported value in filter (expected scalar, list, or object)")
 
 
 def parse_user_filter(
@@ -78,9 +78,8 @@ def parse_user_filter(
         return {}
     parsed = _try_parse_json(raw)
     if not isinstance(parsed, dict):
-        raise ValueError("Filter must be a JSON object")
+        raise ValueError("Filter must be a JSON object (e.g. {\"status\":\"active\"})")
     ops = set(allowed_ops or DEFAULT_ALLOWED_OPS)
     fields = set(allowed_fields) if allowed_fields else None
     return _sanitize(parsed, allowed_ops=ops, allowed_fields=fields)
-
 
