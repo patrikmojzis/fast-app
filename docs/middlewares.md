@@ -17,7 +17,7 @@ async def create_post():
 ```
 
 - Resolves the referenced target either by name (from bound kwargs) or class.
-- Raises `UnauthorizedException` when the user is missing or the policy denies (deprecated: `UnauthorisedException`).
+- Raises `UnauthorizedException` when the user is missing or the policy denies.
 - Ideal companion to `ModelBindingMiddleware` so instance checks receive the already-bound model.
 
 ## BelongsToMiddleware

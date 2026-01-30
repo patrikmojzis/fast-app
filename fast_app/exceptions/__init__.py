@@ -31,7 +31,6 @@ from .google_auth_exceptions import (
 from .http_exceptions import (
     HttpException,
     UnauthorizedException,
-    UnauthorisedException,
     ServerErrorException,
     UnprocessableEntityException,
     ForbiddenException,
@@ -66,7 +65,6 @@ __all__ = [
     # http
     "HttpException",
     "UnauthorizedException",
-    "UnauthorisedException",
     "ServerErrorException",
     "UnprocessableEntityException",
     "ForbiddenException",

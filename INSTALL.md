@@ -52,7 +52,7 @@ The FastApp package includes:
 
 - **Database**: MongoDB utilities (`mongo.py`)
 - **Decorators**: `@cached`, `@retry`, `@singleton`, `@deprecated`, `@etag`
-- **Exceptions**: `HttpException`, `DatabaseNotInitializedExceptionException`, `UnauthorizedException` (deprecated: `UnauthorisedException`)
+- **Exceptions**: `HttpException`, `DatabaseNotInitializedExceptionException`, `UnauthorizedException`
 - **HTTP**: `Resource` for REST APIs
 - **Models**: `Model` for data models
 - **Notifications**: Base classes for notification system
