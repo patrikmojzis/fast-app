@@ -13,8 +13,8 @@ from fast_app.core.api import validate_request
 from quart import g
 
 async def store(data: LeadSchema):
-    # `data` is the schema instance, `g.validated` is the dict
-    lead = await Lead.create(g.validated)
+    # `data` is the schema instance, `data.validated` is the dict
+    lead = await Lead.create(data.validated)
     return LeadResource(lead)
 ```
 

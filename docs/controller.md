@@ -31,12 +31,12 @@ async def show(lead: Lead):
 
 
 async def store(data: LeadSchema):
-    lead = await Lead.create(g.validated)
+    lead = await Lead.create(data.validated)
     return LeadResource(lead)
 
 
 async def update(lead: Lead, data: LeadSchema):
-    await lead.update(g.validated)
+    await lead.update(data.validated)
     return LeadResource(lead)
 
 
