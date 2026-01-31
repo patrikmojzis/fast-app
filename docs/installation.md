@@ -16,7 +16,7 @@ source .venv/bin/activate   # Windows: .venv\\Scripts\\activate
 2) Install FastApp
 
 ```bash
-pip install "git+https://github.com/patrikmojzis/fast-app#egg=fast-app[dev]"
+pip install "git+https://github.com/patrikmojzis/fast-app"
 ```
 
 3) Scaffold a new project
@@ -46,6 +46,7 @@ from quart import Quart
 from pydantic import constr
 from fast_app import Route, Schema, Model, Resource
 from fast_app.utils.routing_utils import register_routes
+from fast_app.core.pydantic_types import ShortStr
 
 class Item(Model):
     name: str
@@ -57,7 +58,7 @@ class ItemResource(Resource):
         }
 
 class ItemSchema(Schema):
-    name: constr(min_length=1, max_length=255)
+    name: ShortStr
 
 async def create_item(data: ItemSchema):
     item = await Item.create(data.model_dump())

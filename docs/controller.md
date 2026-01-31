@@ -11,7 +11,7 @@ Controllers are regular Python modules exporting async functions. Combine them w
 ```python
 from typing import Literal
 
-from fast_app import Schema, ExistsValidatorRule, list_paginated
+from fast_app import Schema, ExistsValidatorRule, paginate
 from fast_app.core.pydantic_types import ObjectIdField
 from quart import g
 from pydantic import Field
@@ -23,7 +23,7 @@ from app.models.rep import Rep
 from app.models.county import County
 
 async def index():
-    return await list_paginated(Lead, LeadResource)
+    return await paginate(Lead, LeadResource)
 
 
 async def show(lead: Lead):

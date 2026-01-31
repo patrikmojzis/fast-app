@@ -6,7 +6,7 @@ A FastApp project - Python framework for rapid application development.
 
 1. **Install dev dependencies:**
    ```bash
-   pip install "git+https://github.com/patrikmojzis/fast-app#egg=fast-app[dev]"
+   pip install "git+https://github.com/patrikmojzis/fast-app"
    ```
 
 2. **Set up environment:**

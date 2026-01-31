@@ -6,7 +6,6 @@ Fast App is an async, Laravel-inspired toolkit for building HTTP APIs on Quart +
 
 - Python 3.12+
 - MongoDB (required)
-- `SECRET_KEY` set in your environment
 - Optional: Redis (cache/socket.io/scheduler), RabbitMQ (`async_farm` queue)
 
 ## Quick start
@@ -14,7 +13,7 @@ Fast App is an async, Laravel-inspired toolkit for building HTTP APIs on Quart +
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install "git+https://github.com/patrikmojzis/fast-app#egg=fast-app[dev]"
+pip install "git+https://github.com/patrikmojzis/fast-app"
 fast-app init
 fast-app serve
 ```

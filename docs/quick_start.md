@@ -9,7 +9,7 @@ Create a virtual environment and install FastApp:
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install "git+https://github.com/patrikmojzis/fast-app#egg=fast-app[dev]"
+pip install "git+https://github.com/patrikmojzis/fast-app"
 ```
 
 ## Initialize a project

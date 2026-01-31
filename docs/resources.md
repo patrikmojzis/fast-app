@@ -25,7 +25,7 @@ class StockResource(Resource):
         return {
             "_id": stock.id,
             "name": stock.name,
-            "rep": RepResource(await stock.rep()),
+            "rep": RepResource(stock.rep()),
         }
 ```
 
