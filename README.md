@@ -23,6 +23,7 @@ from quart import Quart
 from pydantic import constr
 from fast_app import Route, Schema, Model, Resource
 from fast_app.utils.routing_utils import register_routes
+from fast_app.core.pydantic_types import ShortStr
 
 class Item(Model):
     name: str
@@ -32,10 +33,10 @@ class ItemResource(Resource):
         return {"name": item.name}
 
 class ItemSchema(Schema):
-    name: constr(min_length=1, max_length=255)
+    name: ShortStr
 
 async def create_item(data: ItemSchema):
-    item = await Item.create(data.model_dump())
+    item = await Item.create(data.validated)
     return ItemResource(item)
 
 app = Quart(__name__)
