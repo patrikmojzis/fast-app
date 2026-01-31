@@ -163,6 +163,9 @@ cython_debug/
 # VS Code
 .vscode/
 
+# Project scripts
+/scripts/
+
 # Sublime Text
 *.sublime-project
 *.sublime-workspace
