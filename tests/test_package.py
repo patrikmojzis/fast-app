@@ -12,7 +12,7 @@ import fast_app
 def test_package_version():
     """Test that package version is accessible."""
     assert hasattr(fast_app, '__version__')
-    assert fast_app.__version__ == "0.2.0"
+    assert fast_app.__version__ == "0.2.1"
 
 
 def test_package_author():
