@@ -73,7 +73,7 @@ def get_bearer_token() -> str | None:
     else:
         raise AppException("Does not have request context.")
 
-class ListQuery(BaseModel):
+class ListQuery(Schema):
     """
     Common pagination and search query parameters.
 
