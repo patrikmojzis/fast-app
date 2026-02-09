@@ -1,16 +1,11 @@
-import json
-import importlib
 import asyncio
-import os
-import socketio
-from typing import TYPE_CHECKING, AsyncGenerator, Any, Optional, Union
+from typing import TYPE_CHECKING
 
 from fast_app.utils.broadcast_utils import (
     transform_broadcast_data,
     get_broadcast_ons,
 )
-from fast_app.decorators.deprecated_decorator import deprecated
-
+from fast_app.utils.socketio_mgr_singleton import get_sio_mgr
 
 if TYPE_CHECKING:
     from fast_app.contracts.broadcast_event import BroadcastEvent
@@ -35,13 +30,16 @@ async def broadcast(event: 'BroadcastEvent') -> bool:
     payload = await transform_broadcast_data(await event.broadcast_as())
     
     # Publish to Redis
-    redis_url = os.getenv("REDIS_SOCKETIO_URL", "redis://localhost:6379/14")
-    mgr = socketio.AsyncRedisManager(redis_url)
-    await asyncio.gather(*(mgr.emit(
+    mgr = await get_sio_mgr()
+    results = await asyncio.gather(*(mgr.emit(
         event.get_event_name(), 
         payload, 
         room=broadcast_on.get("room"), 
         namespace=broadcast_on.get("namespace")
-        ) for broadcast_on in broadcast_ons))
-    
+        ) for broadcast_on in broadcast_ons),
+        return_exceptions=True)
+
+    if errors := [r for r in results if isinstance(r, Exception)]:
+        raise ExceptionGroup("Socket.IO broadcast failed", errors)
+
     return True
