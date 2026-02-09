@@ -84,3 +84,10 @@ class PayloadTooLargeException(HttpException):
             status_code=413,
             **kwargs
         )
+
+class PaymentRequiredException(HttpException):
+    def __init__(self, **kwargs):
+        super().__init__(
+            status_code=402,
+            **kwargs
+        )
