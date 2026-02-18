@@ -36,7 +36,7 @@ def generate_unique_filename(original_filename: str, preserve_extension: bool = 
 
 def get_file_extension_from_filename(filename: str) -> str:
     """Get the file extension from a filename."""
-    return Path(filename).suffix.lower()
+    return Path(filename).suffix.lower().lstrip(".")
 
 
 def get_mime_type(filename: str) -> Optional[str]:
