@@ -102,11 +102,11 @@ lead = await user.lead()     # has_one helper under the hood
 user = await lead.user()
 ```
 
-- `belongs_to(parent_model, parent_key="_id", child_key="modelname_id")`
-- `has_one(child_model, parent_key="_id", child_key="modelname_id")`
-- `has_many(child_model, parent_key="_id", child_key="modelname_id")`
+- `belongs_to(parent_model, parent_key="_id", child_key="snake_case_model_name_id")`
+- `has_one(child_model, parent_key="_id", child_key="snake_case_model_name_id")`
+- `has_many(child_model, parent_key="_id", child_key="snake_case_model_name_id")`
 
-Override `parent_key` or `child_key` for non-standard schemas. Each helper automatically converts string IDs to `ObjectId` when `is_object_id` is `True` (default).
+Override `parent_key` or `child_key` for non-standard schemas. Example default: `ChatQuery` -> `chat_query_id`. Each helper automatically converts string IDs to `ObjectId` when `is_object_id` is `True` (default).
 When you expose relationships as methods, use `TYPE_CHECKING` imports (as above) to keep type hints without triggering runtime import cycles.
 
 ## Change tracking and persistence
@@ -121,5 +121,4 @@ await User.update_many({"active": False}, {"$set": {"active": True}})
 ```
 
 Use `touch()` to bump the `updated_at` timestamp without modifying other fields.
-
 

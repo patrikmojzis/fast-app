@@ -14,7 +14,7 @@ from fast_app.exceptions.model_exceptions import ModelNotFoundException
 from fast_app.utils.datetime_utils import now
 from fast_app.utils.model_utils import build_search_query_from_string
 from fast_app.utils.query_builder import QueryBuilder
-from fast_app.utils.serialisation import serialise
+from fast_app.utils.serialisation import pascal_case_to_snake_case, serialise
 from fast_app.utils.versioned_cache import bump_collection_version
 
 if TYPE_CHECKING:
@@ -507,10 +507,14 @@ class Model:
         val = getattr(self, key)
         return val if isinstance(val, ObjectId) else ObjectId(val)
 
+    @staticmethod
+    def _default_relation_child_key(model_cls: type) -> str:
+        return f"{pascal_case_to_snake_case(model_cls)}_id"
+
     async def belongs_to(self, parent_model, parent_key=None, child_key=None, is_object_id=True) -> Optional['T']:
         parent_model = parent_model
         parent_key = parent_key or '_id'
-        child_key = child_key or f'{parent_model.__name__.lower()}_id'
+        child_key = child_key or self._default_relation_child_key(parent_model)
         if getattr(self, child_key, None) is None:
             return None
 
@@ -519,7 +523,7 @@ class Model:
     async def has_one(self, child_model, parent_key=None, child_key=None) -> Optional['T']:
         child_model = child_model
         parent_key = parent_key or '_id'
-        child_key = child_key or f'{self.__class__.__name__.lower()}_id'
+        child_key = child_key or self._default_relation_child_key(self.__class__)
         if getattr(self, parent_key, None) is None:
             return None
 
@@ -528,7 +532,7 @@ class Model:
     async def has_many(self, child_model, parent_key=None, child_key=None) -> list['T']:
         child_model = child_model
         parent_key = parent_key or '_id'
-        child_key = child_key or f'{self.__class__.__name__.lower()}_id'
+        child_key = child_key or self._default_relation_child_key(self.__class__)
         if getattr(self, parent_key, None) is None:
             return []
 
