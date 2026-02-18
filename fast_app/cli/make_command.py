@@ -24,6 +24,7 @@ class MakeCommand(CommandBase):
         'broadcast_event': 'app/socketio/events',
         'listener': 'app/listeners', 
         'model': 'app/models',
+        'controller': 'app/http_files/controllers',
         'notification': 'app/notifications',
         'notification_channel': 'app/notification_channels',
         'observer': 'app/observers',
@@ -78,7 +79,7 @@ class MakeCommand(CommandBase):
             class_name = snake_case_to_pascal_case(args.name)
             file_name = args.name if is_snake_case(args.name) else pascal_case_to_snake_case(class_name)
         
-        content = self._process_template(template_path, args.type, class_name)
+        content = self._process_template(template_path, args.type, class_name, file_name)
         try:
             dest_dir = resolve_cli_path(args.path, self.TYPE_PATHS[args.type])
         except ValueError as exc:
@@ -95,11 +96,41 @@ class MakeCommand(CommandBase):
         
         print(f"✅ Created {args.type}: {dest_file}")
     
-    def _process_template(self, template_path: Path, file_type: str, class_name: str) -> str:
+    def _process_template(self, template_path: Path, file_type: str, class_name: str, file_name: str) -> str:
         """Process template with class name replacement."""
         content = template_path.read_text(encoding='utf-8')
-        # Replace only the placeholder class name across all templates
-        # to avoid touching import symbols or base classes.
-        pattern = r'\bNewClass\b'
-        return re.sub(pattern, class_name, content)
+        if file_type != "controller":
+            # Replace only the placeholder class name across templates
+            # to avoid touching import symbols or base classes.
+            pattern = r'\bNewClass\b'
+            return re.sub(pattern, class_name, content)
+
+        model_name, model_var_name = self._infer_model_names(class_name, file_name)
+        replacements = {
+            "__MODEL_CLASS__": model_name,
+            "__MODEL_SNAKE__": pascal_case_to_snake_case(model_name),
+            "__MODEL_VAR__": model_var_name,
+        }
+        for placeholder, value in replacements.items():
+            content = content.replace(placeholder, value)
+        return content
+
+    def _infer_model_names(self, class_name: str, file_name: str) -> tuple[str, str]:
+        """Infer model class/variable names from controller class/file names."""
+        model_name = class_name
+        if model_name.endswith("Controller") and len(model_name) > len("Controller"):
+            model_name = model_name[:-len("Controller")]
+
+        model_var_name = file_name
+        if model_var_name.endswith("_controller"):
+            model_var_name = model_var_name[:-len("_controller")]
+        model_var_name = model_var_name.strip("_")
+
+        if not model_var_name:
+            model_var_name = pascal_case_to_snake_case(model_name)
+
+        if model_name == class_name and file_name.endswith("_controller"):
+            model_name = snake_case_to_pascal_case(model_var_name)
+
+        return model_name, model_var_name
     

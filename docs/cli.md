@@ -33,11 +33,12 @@ Create boilerplate files from FastApp templates.
 fast-app make <type> <Name>
 ```
 
-Common types include `model`, `resource`, `schema`, `middleware`, `observer`, `policy`, `event`, `factory`, `migration`, `command`, `room`, and more (see `fast_app/cli/make_command.py`).
+Common types include `model`, `controller`, `resource`, `schema`, `middleware`, `observer`, `policy`, `event`, `factory`, `migration`, `command`, `room`, and more (see `fast_app/cli/make_command.py`).
 
 Example:
 ```python
 fast-app make model User
+fast-app make controller user_controller
 fast-app make resource UserResource
 fast-app make schema UserSchema
 fast-app make middleware AuthMiddleware
