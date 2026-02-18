@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-from datetime import datetime, timezone
 from typing import Any, Callable, NotRequired, TypedDict
 
 from redis import asyncio as aioredis
@@ -41,6 +40,9 @@ async def _get_redis() -> aioredis.Redis:
 
 async def run_scheduler(jobs: list[SchedulerJobSpec]) -> None:
     r = await _get_redis()
+    loop = asyncio.get_running_loop()
+    tick_interval_s = 1.0
+    next_tick = loop.time()
 
     # Normalize jobs with identifiers
     normalized: list[tuple[str, int, Callable[..., Any]]] = []
@@ -76,10 +78,17 @@ async def run_scheduler(jobs: list[SchedulerJobSpec]) -> None:
                 except Exception:
                     pass
 
-        await asyncio.sleep(1)
+        next_tick += tick_interval_s
+        sleep_for = next_tick - loop.time()
+        if sleep_for <= 0:
+            # Catch up to the next future tick so delays do not accumulate over time.
+            missed_ticks = int((-sleep_for) // tick_interval_s) + 1
+            next_tick += missed_ticks * tick_interval_s
+            sleep_for = max(0.0, next_tick - loop.time())
+
+        await asyncio.sleep(sleep_for)
 
 
 __all__ = ["SchedulerJobSpec", "run_scheduler"]
-
 
 
