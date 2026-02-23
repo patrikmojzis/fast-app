@@ -1,6 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo
 
-def now(tz: timezone = None) -> datetime:
+
+def now(tz: tzinfo = None) -> datetime:
     if not tz:
         tz = timezone.utc
         
