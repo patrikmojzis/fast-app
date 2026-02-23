@@ -6,6 +6,7 @@ from bson import ObjectId
 from fast_validation import ValidatorRule, ValidationRuleException
 
 from fast_app.utils.model_resolver import resolve_model_from_field, resolve_model_reference
+from fast_app.utils.serialisation import pascal_case_to_snake_case
 
 if TYPE_CHECKING:
     from fast_app.contracts.model import Model as ModelBase
@@ -38,8 +39,14 @@ class ExistsValidatorRule(ValidatorRule):
         if self.model is None:
             return "id"
         if isinstance(self.model, str):
-            return f"{self.model}_id"
-        return f"{self.model.__name__.lower()}_id"
+            return f"{pascal_case_to_snake_case(self.model)}_id"
+        collection_name = getattr(self.model, "collection_name", None)
+        if callable(collection_name):
+            try:
+                return f"{collection_name()}_id"
+            except Exception:
+                pass
+        return f"{pascal_case_to_snake_case(self.model.__name__)}_id"
 
     def _resolve_model_class(self, loc: Sequence[str]) -> type["ModelBase"]:
         if self._resolved_model is not None:

@@ -61,7 +61,7 @@ class Model:
 
     @classmethod
     def collection_name(cls) -> str:
-        return cls.__name__.lower()
+        return pascal_case_to_snake_case(cls)
 
     @classmethod
     async def collection_cls(cls) -> 'AsyncIOMotorCollection':
@@ -255,7 +255,7 @@ class Model:
         if isinstance(query, str):
             # Add unionWith for each relation to combine results with related lookups
             for relation in cls.search_relations or []:
-                related_model_name = relation["model"].lower()
+                related_model_name = pascal_case_to_snake_case(relation["model"])
                 foreign_key = relation["field"]
                 relation_fields = [field for field in relation.get("search_fields", []) if field]
                 if not relation_fields:
