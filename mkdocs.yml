@@ -25,6 +25,7 @@ nav:
       - CLI: cli.md
       - Middlewares: middlewares.md
       - Queue: queue.md
+      - Locks: locks.md
       - Scheduler: scheduler.md
       - Async Farm: async_farm.md
       - Events: events.md

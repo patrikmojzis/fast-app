@@ -48,6 +48,7 @@ LOG_LEVEL=DEBUG          # defaults to INFO
 - `REDIS_SOCKETIO_URL` (optional): Default `redis://localhost:6379/14`.
 - `REDIS_DATABASE_CACHE_URL` (optional): Default `redis://localhost:6379/13`.
 - `REDIS_SCHEDULER_URL` (optional): Default `redis://localhost:6379/12`.
+- `REDIS_LOCK_URL` (optional): Dedicated distributed lock Redis URL. If not set, lock APIs fall back to `REDIS_SCHEDULER_URL`, then `REDIS_CACHE_URL`. If none are set, lock APIs raise a runtime configuration error.
 
 #### Queue
 - `QUEUE_DRIVER` (optional): `sync` or `async_farm`. Default: `sync`.

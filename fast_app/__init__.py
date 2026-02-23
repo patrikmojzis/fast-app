@@ -73,6 +73,8 @@ from .core import (
     Schema,
     ValidatorRule,
     Cache,
+    RedisDistributedLock,
+    redis_lock,
 )
 from .decorators import (
     cached,
@@ -144,6 +146,8 @@ __all__ = [
     "Schema",
     "ValidatorRule",
     "Cache",
+    "RedisDistributedLock",
+    "redis_lock",
     # decorators
     "cached",
     "deprecated",

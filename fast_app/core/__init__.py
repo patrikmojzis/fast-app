@@ -3,6 +3,8 @@
 These modules provide the always-on fundamentals of the framework.
 """
 
+from fast_validation import Schema, ValidatorRule
+
 from .api import (
     get_client_ip,
     get_mongo_filter_from_query,
@@ -14,6 +16,8 @@ from .api import (
     paginate
 )
 from .broadcasting import broadcast
+from .cache import Cache
+from .context import context, define_key, ContextKey
 from .events import dispatch, dispatch_now
 from .jwt_auth import (
     create_access_token,
@@ -24,13 +28,11 @@ from .jwt_auth import (
     ACCESS_TOKEN_TYPE,
 )
 from .localization import __, set_locale, get_locale, trans, trans_choice
+from .lock import RedisDistributedLock, redis_lock
 from .queue import queue
-from fast_validation import Schema, ValidatorRule
 from .stopwatch import Stopwatch
 from .storage import Storage
 from .validation_rules.exists_validator_rule import ExistsValidatorRule
-from .context import context, define_key, ContextKey
-from .cache import Cache
 
 __all__ = [
     # api
@@ -75,4 +77,7 @@ __all__ = [
     "ValidatorRule",
     # cache
     "Cache",
+    # distributed lock
+    "RedisDistributedLock",
+    "redis_lock",
 ]
