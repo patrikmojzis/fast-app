@@ -135,7 +135,10 @@ message = MailMessage(
 await Mail.send("user@example.com", message)
 ```
 
-Configure via environment variables: `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`.
+Configure via environment variables:
+- `MAIL_DRIVER=log|smtp|smtp2go`
+- For `smtp`: `MAIL_SERVER`, `MAIL_PORT`, `MAIL_LOGIN`, `MAIL_PASSWORD`, `MAIL_FROM`
+- For `smtp2go`: `MAIL_FROM`, `SMTP2GO_API_KEY`
 
 ### Expo Push Notifications
 
@@ -201,4 +204,3 @@ class EmailOTPNotification(Notification):
 - Combine with events: dispatch an event that triggers a listener which sends a notification.
 
 Notifications centralize message formatting and delivery, making it easy to support new channels or update content without touching controllers.
-

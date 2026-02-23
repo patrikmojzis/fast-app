@@ -58,13 +58,16 @@ LOG_LEVEL=DEBUG          # defaults to INFO
 - `HARD_TIMEOUT_S` (optional): Default hard timeout for queued jobs.
 
 #### Email notifications
-- `MAIL_DRIVER` (optional): `log` (default) or `smtp`.
+- `MAIL_DRIVER` (optional): `log` (default), `smtp`, or `smtp2go`.
 - If `smtp`:
   - `MAIL_SERVER`
   - `MAIL_PORT`
   - `MAIL_LOGIN`
   - `MAIL_PASSWORD`
   - `MAIL_FROM`
+- If `smtp2go`:
+  - `MAIL_FROM`
+  - `SMTP2GO_API_KEY`
 
 #### Log watcher integrations
 - Slack: `SEND_LOG_ERRORS_SLACK_WEBHOOK_URL` (optional). Includes current `ENV` in messages.
@@ -107,12 +110,13 @@ SECRET_KEY=dev-secret-key-not-for-production
 # LOCALE_DEFAULT=en
 # LOCALE_FALLBACK=en
 # LOCALE_PATH=
-# MAIL_DRIVER=log             # or smtp
+# MAIL_DRIVER=log             # or smtp or smtp2go
 # MAIL_SERVER=
 # MAIL_PORT=
 # MAIL_LOGIN=
 # MAIL_PASSWORD=
 # MAIL_FROM=
+# SMTP2GO_API_KEY=
 # SEND_LOG_ERRORS_SLACK_WEBHOOK_URL=
 # SEND_LOG_ERRORS_TELEGRAM_BOT_TOKEN=
 # SEND_LOG_ERRORS_TELEGRAM_CHAT_ID=

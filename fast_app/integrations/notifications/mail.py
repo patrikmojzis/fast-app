@@ -1,9 +1,11 @@
+import json
 import logging
 import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import TYPE_CHECKING
+from urllib import error, request
 
 import markdown
 from pydantic import BaseModel, Field
@@ -49,6 +51,8 @@ class Mail:
 
         if mail_driver == "smtp":
             cls.__send_smtp(to, message)
+        elif mail_driver == "smtp2go":
+            cls.__send_smtp2go(to, message)
         elif mail_driver == "log":
             cls.__send_log(to, message)
 
@@ -60,6 +64,53 @@ class Mail:
             server.starttls()
             server.login(os.getenv("MAIL_LOGIN"), os.getenv("MAIL_PASSWORD"))
             server.sendmail(os.getenv("MAIL_FROM"), to, mail.as_string())
+
+    @classmethod
+    def __send_smtp2go(cls, to: str, message: 'MailMessage'):
+        smtp2go_api_key = os.getenv("SMTP2GO_API_KEY")
+        if not smtp2go_api_key:
+            raise ValueError("SMTP2GO_API_KEY is required when MAIL_DRIVER=smtp2go")
+
+        payload = {
+            "sender": os.getenv("MAIL_FROM"),
+            "to": [to],
+            "subject": message.subject,
+        }
+
+        if isinstance(message, MarkdownMailMessage):
+            payload["text_body"] = message.body
+            payload["html_body"] = markdown.markdown(message.body)
+        elif message.mime_type == "html":
+            payload["html_body"] = message.body
+        else:
+            payload["text_body"] = message.body
+
+        body = json.dumps(payload).encode("utf-8")
+        req = request.Request(
+            url="https://api.smtp2go.com/v3/email/send",
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "X-Smtp2go-Api-Key": smtp2go_api_key,
+            },
+            method="POST",
+        )
+
+        try:
+            with request.urlopen(req) as response:
+                response_data = json.loads(response.read().decode("utf-8"))
+        except error.HTTPError as exc:
+            response_body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"SMTP2GO request failed with status {exc.code}: {response_body}"
+            ) from exc
+        except error.URLError as exc:
+            raise RuntimeError(f"SMTP2GO request failed: {exc.reason}") from exc
+
+        failed = response_data.get("data", {}).get("failed", 0)
+        if failed:
+            raise RuntimeError(f"SMTP2GO failed to deliver {failed} email(s)")
 
     @classmethod
     def __send_log(cls, to: str, message: 'MailMessage'):
