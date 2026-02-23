@@ -212,8 +212,14 @@ class Model:
         return self
 
     @classmethod
-    async def search(cls: type[T], query: str | dict[str, Any] | ObjectId | int, limit: int = 10, skip: int = 0, 
-                                   sort: Optional[list[tuple[str, int]]] = None) -> dict[str, Any]:
+    async def search(
+        cls: type[T],
+        query: str | dict[str, Any] | ObjectId | int,
+        limit: int = 10,
+        skip: int = 0,
+        sort: Optional[list[tuple[str, int]]] = None,
+        base_filter: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
         """
         Search for records in the current collection and related collections.
         """
@@ -231,17 +237,18 @@ class Model:
         pipeline = []
         
         # Query for current collection
-        base_query = await cls.query_modifier({}, "search", current_collection) 
+        base_query = await cls.query_modifier({}, "search", current_collection)
+        context_query = base_query
+        if base_filter:
+            context_query = {"$and": [context_query, base_filter]} if context_query else base_filter
+
+        search_query = build_search_query_from_string(query, search_fields) if isinstance(query, str) else query
+        direct_match_query = search_query
+        if context_query:
+            direct_match_query = {"$and": [context_query, search_query]} if search_query else context_query
         
         # Find direct matches first
-        direct_match = {
-            "$match": {
-                "$and": [
-                    base_query,
-                    build_search_query_from_string(query, search_fields) if isinstance(query, str) else query # Build query from string or use custom
-                ]
-            }
-        }
+        direct_match = {"$match": direct_match_query}
         pipeline.append(direct_match)
         
         # Use relations search only if searching text
@@ -277,8 +284,8 @@ class Model:
                             {"$unwind": {"path": "$matches"}},
                             # Keep only the matching records from the current collection
                             {"$replaceRoot": {"newRoot": "$matches"}},
-                            # Apply query context
-                            {"$match": base_query}
+                            # Apply query context (including optional list filters)
+                            {"$match": context_query}
                         ]
                     }
                 })

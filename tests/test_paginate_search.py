@@ -1,7 +1,6 @@
 import pytest
 from quart import Quart
 
-from fast_app.utils.model_utils import build_search_query_from_string
 from fast_app.core.api import list_paginated, search_paginated
 
 
@@ -15,6 +14,7 @@ class DummyResource:
 
 class DummyModel:
     search_called_with = None
+    search_base_filter_called_with = None
     count_called_with = None
     find_called_with = None
 
@@ -23,8 +23,9 @@ class DummyModel:
         return ["name"]
 
     @classmethod
-    async def search(cls, query, limit, skip, sort=None):
+    async def search(cls, query, limit, skip, sort=None, base_filter=None):
         cls.search_called_with = query
+        cls.search_base_filter_called_with = base_filter
         return {"meta": {}, "data": [{"name": "a"}]}
 
     @classmethod
@@ -55,11 +56,8 @@ async def test_simple_index_pagination_and_search():
     # Search with query
     async with app.test_request_context("/?search=foo"):
         DummyModel.search_called_with = None
+        DummyModel.search_base_filter_called_with = None
         response = await search_paginated(DummyModel, DummyResource, filter={"active": True})
-        expected = {
-            "$and": [
-                {"active": True},
-                build_search_query_from_string("foo", ["name"]),
-            ]
-        }
-        assert DummyModel.search_called_with == expected
+        assert response["data"] == [{"name": "a"}]
+        assert DummyModel.search_called_with == "foo"
+        assert DummyModel.search_base_filter_called_with == {"active": True}

@@ -11,7 +11,6 @@ from fast_app.exceptions.common_exceptions import AppException
 from fast_app.exceptions.http_exceptions import UnprocessableEntityException
 from fast_app.utils.api_filters import parse_user_filter
 from fast_app.utils.api_utils import is_list_type, collect_list_values
-from fast_app.utils.model_utils import build_search_query_from_string
 
 if TYPE_CHECKING:
     pass
@@ -108,13 +107,15 @@ async def search_paginated(model: type['Model'], resource: type['Resource'], *, 
 
     params = await validate_query(SearchQuery)
 
-    search_filter = build_search_query_from_string(params.search, model.all_fields())
-    if base_filter:
-        search_filter = {"$and": [base_filter, search_filter]}
-
     sort = _build_sort_query(params, sort)
     skip = (params.page - 1) * params.per_page
-    res = await model.search(search_filter, params.per_page, skip, sort=sort)
+    res = await model.search(
+        params.search,
+        params.per_page,
+        skip,
+        sort=sort,
+        base_filter=base_filter or None,
+    )
 
     return {
         "meta": res["meta"],

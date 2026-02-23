@@ -17,6 +17,7 @@ class Lead(Model):
 class Order(Model):
     lead_id: Optional[ObjectId] = None
     title: Optional[str] = None
+    is_active: Optional[bool] = None
 
     search_fields = ["title"]
     search_relations = [
@@ -46,3 +47,29 @@ async def test_search_relations_finds_orders_by_related_lead():
     assert result["meta"]["total"] == 1
     assert len(result["data"]) == 1
     assert result["data"][0].lead_id == lead_alice._id
+
+
+@pytest.mark.asyncio
+async def test_search_relations_respects_base_filter():
+    os.environ["MONGO_URI"] = "mongodb://localhost:27017"
+    os.environ["TEST_ENV"] = "1"
+    os.environ["TEST_DB_NAME"] = "fast_app_search_relations_test"
+
+    await clear()
+    db = await get_db()
+    await db.drop_collection("lead")
+    await db.drop_collection("order")
+
+    lead_alice = await Lead.create({"name": "Alice", "email": "alice@example.com"})
+    lead_bob = await Lead.create({"name": "Bob", "email": "bob@example.com"})
+
+    await Order.create({"lead_id": lead_alice._id, "title": "Alpha", "is_active": True})
+    await Order.create({"lead_id": lead_bob._id, "title": "Beta", "is_active": True})
+    await Order.create({"lead_id": lead_alice._id, "title": "Gamma", "is_active": False})
+
+    result = await Order.search("Alice", limit=10, skip=0, base_filter={"is_active": True})
+
+    assert result["meta"]["total"] == 1
+    assert len(result["data"]) == 1
+    assert result["data"][0].lead_id == lead_alice._id
+    assert result["data"][0].is_active is True
