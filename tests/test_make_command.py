@@ -38,3 +38,20 @@ def test_make_controller_from_pascal_case_name(tmp_path, monkeypatch):
     assert "from app.models.property import Property" in content
     assert "async def store(data: PropertySchema):" in content
     assert "property = await Property.create(data.validated)" in content
+
+
+def test_make_schema_from_suffixed_name_includes_partial_schema(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    command = MakeCommand()
+    args = argparse.Namespace(type="schema", name="ModelSchema", path=None)
+
+    command.execute(args)
+
+    generated = Path("app/http_files/schemas/model_schema.py")
+    assert generated.exists()
+
+    content = generated.read_text(encoding="utf-8")
+    assert "class ModelSchema(Schema):" in content
+    assert "@from_schema(ModelSchema, partial=True)" in content
+    assert "class ModelPartialSchema(Schema):" in content

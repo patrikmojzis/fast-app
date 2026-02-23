@@ -99,6 +99,16 @@ class MakeCommand(CommandBase):
     def _process_template(self, template_path: Path, file_type: str, class_name: str, file_name: str) -> str:
         """Process template with class name replacement."""
         content = template_path.read_text(encoding='utf-8')
+        if file_type == "schema":
+            schema_class_name, partial_schema_class_name = self._infer_schema_names(class_name)
+            replacements = {
+                "NewClass": schema_class_name,
+                "NewPartialClass": partial_schema_class_name,
+            }
+            for placeholder, value in replacements.items():
+                content = content.replace(placeholder, value)
+            return content
+
         if file_type != "controller":
             # Replace only the placeholder class name across templates
             # to avoid touching import symbols or base classes.
@@ -133,4 +143,15 @@ class MakeCommand(CommandBase):
             model_name = snake_case_to_pascal_case(model_var_name)
 
         return model_name, model_var_name
+
+    def _infer_schema_names(self, class_name: str) -> tuple[str, str]:
+        """Infer schema and partial-schema class names from the provided class name."""
+        schema_class_name = class_name
+        if schema_class_name.endswith("Schema") and len(schema_class_name) > len("Schema"):
+            base_name = schema_class_name[:-len("Schema")]
+        else:
+            base_name = schema_class_name
+
+        partial_schema_class_name = f"{base_name}PartialSchema"
+        return schema_class_name, partial_schema_class_name
     
