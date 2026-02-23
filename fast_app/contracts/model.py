@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 from fast_app.contracts.factory import Factory
 
 T = TypeVar('T', bound='Model')
+TRelated = TypeVar('TRelated', bound='Model')
 
 
 @dataclass
@@ -515,10 +516,16 @@ class Model:
         return val if isinstance(val, ObjectId) else ObjectId(val)
 
     @staticmethod
-    def _default_relation_child_key(model_cls: type) -> str:
+    def _default_relation_child_key(model_cls: type['Model']) -> str:
         return f"{pascal_case_to_snake_case(model_cls)}_id"
 
-    async def belongs_to(self, parent_model, parent_key=None, child_key=None, is_object_id=True) -> Optional['T']:
+    async def belongs_to(
+        self,
+        parent_model: type[TRelated],
+        parent_key: Optional[str] = None,
+        child_key: Optional[str] = None,
+        is_object_id: bool = True,
+    ) -> Optional[TRelated]:
         parent_model = parent_model
         parent_key = parent_key or '_id'
         child_key = child_key or self._default_relation_child_key(parent_model)
@@ -527,7 +534,12 @@ class Model:
 
         return await parent_model.find_one({parent_key: self._get_object_id(child_key) if is_object_id else getattr(self, child_key)})
 
-    async def has_one(self, child_model, parent_key=None, child_key=None) -> Optional['T']:
+    async def has_one(
+        self,
+        child_model: type[TRelated],
+        parent_key: Optional[str] = None,
+        child_key: Optional[str] = None,
+    ) -> Optional[TRelated]:
         child_model = child_model
         parent_key = parent_key or '_id'
         child_key = child_key or self._default_relation_child_key(self.__class__)
@@ -536,7 +548,12 @@ class Model:
 
         return await child_model.find_one({child_key: self._get_object_id(parent_key)})
 
-    async def has_many(self, child_model, parent_key=None, child_key=None) -> list['T']:
+    async def has_many(
+        self,
+        child_model: type[TRelated],
+        parent_key: Optional[str] = None,
+        child_key: Optional[str] = None,
+    ) -> list[TRelated]:
         child_model = child_model
         parent_key = parent_key or '_id'
         child_key = child_key or self._default_relation_child_key(self.__class__)
