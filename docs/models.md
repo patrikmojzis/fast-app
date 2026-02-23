@@ -1,6 +1,6 @@
 # Models
 
-FastApp models are lightweight dataclasses layered on top of Motor. They include change tracking, Mongo-friendly helpers, and Laravel-inspired relationships.
+FastApp models are lightweight typed models layered on top of Motor. They include change tracking, Mongo-friendly helpers, and Laravel-inspired relationships.
 
 ## Generating a model
 
@@ -10,7 +10,7 @@ Use the CLI to scaffold a new model. Naming convention: omit the `Model` suffix 
 fast-app make model User
 ```
 
-This generates `app/models/user.py` with a `User` class stub. Add field annotations directly on the dataclass:
+This generates `app/models/user.py` with a `User` class stub. Add field annotations directly on the model class:
 
 ```python
 from fast_app import Model
@@ -121,4 +121,3 @@ await User.update_many({"active": False}, {"$set": {"active": True}})
 ```
 
 Use `touch()` to bump the `updated_at` timestamp without modifying other fields.
-

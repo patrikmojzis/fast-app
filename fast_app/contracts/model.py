@@ -1,5 +1,4 @@
 # app/models/model.py
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, TypeVar, ClassVar, Any, get_type_hints, get_origin, Self, Dict
 from typing import TYPE_CHECKING
@@ -27,7 +26,6 @@ T = TypeVar('T', bound='Model')
 TRelated = TypeVar('TRelated', bound='Model')
 
 
-@dataclass
 class Model:
     protected: ClassVar[list[str]] = ["_id", "created_at", "updated_at"]
 
