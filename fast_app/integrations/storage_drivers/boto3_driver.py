@@ -203,6 +203,6 @@ class Boto3Driver(StorageDriver):
             headers.update(extra_headers)
         if max_age is not None:
             headers["Cache-Control"] = f"public, max-age={max_age}"
-        return Response(generate(), headers=headers, mimetype=content_type, direct_passthrough=True)
+        return Response(generate(), headers=headers, mimetype=content_type)
 
 
