@@ -154,7 +154,7 @@ DateField = Annotated[
 DateTimeField = Annotated[
     datetime,
     BeforeValidator(_to_datetime),
-    PlainSerializer(lambda v: v.isoformat() if v is not None else None),
+    PlainSerializer(lambda v: v.isoformat() if v is not None else None, return_type=str, when_used="json"),
 ]
 
 
