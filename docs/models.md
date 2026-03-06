@@ -109,6 +109,37 @@ user = await lead.user()
 Override `parent_key` or `child_key` for non-standard schemas. Example default: `ChatQuery` -> `chat_query_id`. Each helper automatically converts string IDs to `ObjectId` when `is_object_id` is `True` (default).
 When you expose relationships as methods, use `TYPE_CHECKING` imports (as above) to keep type hints without triggering runtime import cycles.
 
+## Indexes
+
+Declare indexes on model metadata via `Model.indexes`:
+
+```python
+from fast_app import Model, Index, ASC, DESC
+
+
+class Order(Model):
+    indexes = [
+        Index(
+            keys=[("business_id", ASC), ("stock_id", ASC), ("date", DESC)],
+            name="order_business_stock_date",
+        ),
+        Index(
+            keys=[("business_id", ASC), ("stock_id", ASC), ("items.product_id", ASC), ("date", DESC)],
+            name="order_business_stock_item_date",
+        ),
+    ]
+```
+
+Use `fast-app indexes status|check|sync` to inspect and apply these declarations.
+
+Compound (multi-field) indexes are important when queries repeatedly filter by a field combination.
+MongoDB uses left-prefix matching, so an index on `(business_id, stock_id, date)` can serve:
+- `business_id`
+- `business_id + stock_id`
+- `business_id + stock_id + date`
+
+but not `stock_id + date` without `business_id`.
+
 ## Change tracking and persistence
 
 Setting attributes records dirty fields in `self.clean`. `save()` or `update()` writes only changed fields and updates `updated_at`. Successful operations trigger observer hooks and bump the collection cache version, which invalidates cached queries.

@@ -41,6 +41,9 @@ from .contracts import (
     Factory,
 )
 from .core import (
+    ASC,
+    DESC,
+    Index,
     get_client_ip,
     get_mongo_filter_from_query,
     validate_request,
@@ -114,6 +117,9 @@ __all__ = [
     "Migration",
     "Factory",
     # core
+    "ASC",
+    "DESC",
+    "Index",
     "get_client_ip",
     "get_mongo_filter_from_query",
     "validate_request",

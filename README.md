@@ -51,6 +51,7 @@ register_routes(app, [
 - `fast-app serve` – start the asgi (debug)
 - `fast-app work` – work queue, events
 - `fast-app migrate` / `fast-app seed`
+- `fast-app indexes status|check|sync` – inspect and reconcile model-declared indexes
 
 ## Docs & Links
 - Docs: `mkdocs serve`

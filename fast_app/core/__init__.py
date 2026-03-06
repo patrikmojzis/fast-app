@@ -19,6 +19,7 @@ from .broadcasting import broadcast
 from .cache import Cache
 from .context import context, define_key, ContextKey
 from .events import dispatch, dispatch_now
+from .indexes import ASC, DESC, Index
 from .jwt_auth import (
     create_access_token,
     create_refresh_token,
@@ -33,6 +34,7 @@ from .queue import queue
 from .stopwatch import Stopwatch
 from .storage import Storage
 from .validation_rules.exists_validator_rule import ExistsValidatorRule
+from .validation_rules.unique_validator_rule import UniqueValidatorRule, Unique
 
 __all__ = [
     # api
@@ -77,6 +79,10 @@ __all__ = [
     "ValidatorRule",
     # cache
     "Cache",
+    # indexes
+    "ASC",
+    "DESC",
+    "Index",
     # distributed lock
     "RedisDistributedLock",
     "redis_lock",

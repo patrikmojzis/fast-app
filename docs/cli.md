@@ -6,6 +6,7 @@ FastApp ships with a modular CLI. Run `fast-app -h` from a project root to list 
 - `make` — generate code from templates (models, resources, middlewares, etc.)
 - `publish` — copy optional feature modules (socketio, notification channels)
 - `migrate` / `seed` — execute your app-level database migrations and seeders
+- `indexes` — inspect and synchronize MongoDB indexes declared on models
 - `serve` — run the development ASGI server via Hypercorn with auto-reload
 - `work` — start the async_farm worker supervisor (with optional TUI)
 - `exec` — discover and run app-specific async commands from `app/cli`
@@ -76,6 +77,36 @@ Override the migrations directory with `--path` (relative to the project root):
 ```bash
 fast-app migrate AddIndexToUsers --path app/db/migrations
 ```
+
+### `fast-app indexes`
+
+Inspect and reconcile MongoDB indexes declared on model metadata (`Model.indexes`).
+
+```bash
+fast-app indexes status
+fast-app indexes status --verbose
+fast-app indexes check
+fast-app indexes sync --dry-run
+fast-app indexes sync
+fast-app indexes sync --drop-stale
+```
+
+`status` prints drift summary without changing the database.
+Use `--verbose` to print collection-level details and declared index names even when there is no drift.
+
+`check` is CI-oriented and exits with:
+- `0` when there is no drift
+- `2` when drift is detected
+- `1` on runtime errors
+
+`sync` creates missing indexes and recreates changed ones.
+
+`sync --dry-run` previews changes and exits with:
+- `0` when no changes are needed
+- `3` when changes would be applied
+- `1` on runtime errors
+
+By default, stale indexes are kept. Use `--drop-stale` to remove indexes that are not declared by model metadata.
 
 ### `fast-app seed`
 
