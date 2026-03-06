@@ -70,6 +70,8 @@ __all__ = [
     "Storage",
     # validation rules
     "ExistsValidatorRule",
+    "UniqueValidatorRule",
+    "Unique",
     # context
     "context",
     "define_key",

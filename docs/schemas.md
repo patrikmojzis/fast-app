@@ -115,6 +115,7 @@ Framework helpers such as `fast_app.core.api.validate_request` call `await schem
 ## Built-in rules
 
 - `ExistsValidatorRule(model=None, *, field=None, db_key="_id", allow_null=False, is_object_id=True, each=False)` — verifies that IDs exist in the database. If `model` is omitted, the rule infers the model from the field name (e.g., `rep_id` → `Rep`). When `each=True`, every value in a list is checked.
+- `UniqueValidatorRule(model=None, *, field=None, db_key=None, allow_null=False, each=False, exclude_current=True, current_id_key="_id", route_param=None, current_id_resolver=None)` — checks that a value does not already exist. On PATCH routes, it can automatically ignore the current record (`<model>_id` / `id` / `_id`) so unchanged values do not fail uniqueness checks.
 
 To write your own rule, subclass `fast_validation.validation_rule.ValidatorRule`:
 
