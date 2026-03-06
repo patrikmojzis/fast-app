@@ -5,19 +5,15 @@ from typing import TYPE_CHECKING
 
 from bson import ObjectId
 
-from fast_app.application import Application
 from fast_app.contracts.policy import Policy  # noqa: F401 - used for resolving forward refs in get_type_hints
 from fast_app.core.indexes import Index
-from fast_app.core.queue import queue
 from fast_app.database.mongo import get_db
 from fast_app.decorators.db_cache_decorator import cached_db_retrieval
 from fast_app.exceptions.common_exceptions import DatabaseNotInitializedException
 from fast_app.exceptions.model_exceptions import ModelNotFoundException
 from fast_app.utils.datetime_utils import now
-from fast_app.utils.event_utils import process_model_hook_listener
 from fast_app.utils.model_utils import build_search_query_from_string
 from fast_app.utils.query_builder import QueryBuilder
-from fast_app.utils.queue_utils import to_dotted_path
 from fast_app.utils.serialisation import pascal_case_to_snake_case, serialise
 from fast_app.utils.versioned_cache import bump_collection_version
 
