@@ -1,7 +1,7 @@
-from pydantic import ConfigDict
 from fast_validation import Schema
+from pydantic import ConfigDict
 
-from fast_app.core.pydantic_types import ObjectIdField, DateField, DateTimeField, JSONField
+from fast_app.core.pydantic_types import ObjectIdField, DateField, MongoDateField, DateTimeField, JSONField
 
 
 def test_model_json_schema_with_objectid_field():
@@ -22,6 +22,7 @@ def test_model_json_schema_with_objectid_field():
 def test_model_json_schema_with_date_and_datetime_fields():
     class MySchema(Schema):
         birthday: DateField
+        persisted_birthday: MongoDateField
         created_at: DateTimeField
 
     schema = MySchema.model_json_schema()
@@ -31,6 +32,11 @@ def test_model_json_schema_with_date_and_datetime_fields():
     fmt_date = props["birthday"].get("format")
     if fmt_date is not None:
         assert fmt_date == "date"
+
+    assert "persisted_birthday" in props and props["persisted_birthday"].get("type") == "string"
+    fmt_mongo_date = props["persisted_birthday"].get("format")
+    if fmt_mongo_date is not None:
+        assert fmt_mongo_date == "date-time"
 
     assert "created_at" in props and props["created_at"].get("type") == "string"
     fmt_dt = props["created_at"].get("format")
@@ -45,4 +51,3 @@ def test_model_json_schema_with_json_field():
     schema = MySchema.model_json_schema()
     props = schema.get("properties", {})
     assert "payload" in props
-

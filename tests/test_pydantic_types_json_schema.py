@@ -1,7 +1,9 @@
-from pydantic import ConfigDict
-from fast_validation import Schema
+from datetime import date, datetime, timezone
 
-from fast_app.core.pydantic_types import ObjectIdField, DateField, DateTimeField, JSONField
+from fast_validation import Schema
+from pydantic import ConfigDict
+
+from fast_app.core.pydantic_types import ObjectIdField, DateField, MongoDateField, DateTimeField, JSONField
 
 
 def test_model_json_schema_with_objectid_field():
@@ -22,6 +24,7 @@ def test_model_json_schema_with_objectid_field():
 def test_model_json_schema_with_date_and_datetime_fields():
     class MySchema(Schema):
         birthday: DateField
+        persisted_birthday: MongoDateField
         created_at: DateTimeField
 
     schema = MySchema.model_json_schema()
@@ -32,10 +35,29 @@ def test_model_json_schema_with_date_and_datetime_fields():
     if fmt_date is not None:
         assert fmt_date == "date"
 
+    assert "persisted_birthday" in props and props["persisted_birthday"].get("type") == "string"
+    fmt_mongo_date = props["persisted_birthday"].get("format")
+    if fmt_mongo_date is not None:
+        assert fmt_mongo_date == "date-time"
+
     assert "created_at" in props and props["created_at"].get("type") == "string"
     fmt_dt = props["created_at"].get("format")
     if fmt_dt is not None:
         assert fmt_dt == "date-time"
+
+
+def test_date_field_stays_date_while_mongo_date_field_normalises_to_utc_datetime():
+    class MySchema(Schema):
+        birthday: DateField
+        persisted_birthday: MongoDateField
+
+    schema = MySchema(
+        birthday="2026-03-06",
+        persisted_birthday="2026-03-06",
+    )
+
+    assert schema.birthday == date(2026, 3, 6)
+    assert schema.persisted_birthday == datetime(2026, 3, 6, 0, 0, tzinfo=timezone.utc)
 
 
 def test_model_json_schema_with_json_field():
@@ -45,4 +67,3 @@ def test_model_json_schema_with_json_field():
     schema = MySchema.model_json_schema()
     props = schema.get("properties", {})
     assert "payload" in props
-

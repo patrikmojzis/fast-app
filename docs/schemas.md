@@ -47,7 +47,9 @@ class InviteSchema(Schema):
 When I need quick coercion helpers, `fast_app.core.pydantic_types` ships a handful of annotated types that feel native to Pydantic while keeping Mongo- and JSON-friendly behaviour:
 
 - `ObjectIdField`: Accepts strings or `ObjectId` instances and serialises back to hex strings.
-- `DateField` and `DateTimeField`: Parse ISO strings (and datetimes with `Z`) into Python `date` / `datetime`, serialising back to ISO format.
+- `DateField`: Parses ISO strings into Python `date`, serialising back to ISO date format.
+- `MongoDateField`: Accepts ISO dates or datetimes and normalises them into UTC `datetime` values, useful when persisting date-like values through MongoDB.
+- `DateTimeField`: Parses ISO datetime strings (including `Z`) into Python `datetime`, serialising back to ISO format.
 - `IntFromStrField`: Coerces numeric strings and exact floats to integers, rejecting booleans and fractional floats.
 - `JSONField`: Allows raw dict/list input or JSON strings and returns Python objects.
 - `ShortStr`: Strips whitespace and constrains length to 1–255 characters.
@@ -56,6 +58,7 @@ When I need quick coercion helpers, `fast_app.core.pydantic_types` ships a handf
 from fast_app.core.pydantic_types import (
     ObjectIdField,
     DateField,
+    MongoDateField,
     DateTimeField,
     IntFromStrField,
     ShortStr,
@@ -67,6 +70,7 @@ class SubscriptionSchema(Schema):
     plan: ShortStr
     quota: IntFromStrField = 0
     starts_at: DateField
+    persisted_starts_at: MongoDateField
     renewed_at: DateTimeField | None = None
 
 ```
@@ -149,4 +153,3 @@ Rules run sequentially for each matched value; collect errors are aggregated int
 - Keep schema modules small and reusable; share nested schemas (e.g., `LeadScheduleSchema`) across multiple resources.
 
 With schemas, you get strict structural validation from Pydantic plus async rule checks for cross-cutting invariants.
-
