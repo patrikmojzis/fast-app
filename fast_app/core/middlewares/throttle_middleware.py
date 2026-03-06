@@ -6,7 +6,7 @@ from quart import g
 
 from fast_app.contracts.middleware import Middleware
 from fast_app.core.api import get_client_ip
-from fast_app.core.cache import Cache, r
+from fast_app.core.cache import r
 from fast_app.exceptions.http_exceptions import TooManyRequestsException
 
 
@@ -22,6 +22,7 @@ class ThrottleMiddleware(Middleware):
     - When the number of requests within the window exceeds ``limit``,
       a 429 Too Many Requests is raised.
     """
+    phase = "pre_validation"
 
     def __init__(self, *, limit: int = 60, window_seconds: int = 60, key: str | None = None) -> None:
         self.limit = int(limit)
@@ -53,4 +54,3 @@ class ThrottleMiddleware(Middleware):
             identifier_str = get_client_ip()
 
         return f"throttle:{self.key}:{identifier_str}"
-

@@ -11,6 +11,7 @@ from fast_app.exceptions.http_exceptions import NotFoundException
 
 class BelongsToMiddleware(Middleware):
     """Ensure that a bound child model belongs to a given parent model."""
+    phase = "pre_validation"
 
     def __init__(
         self,

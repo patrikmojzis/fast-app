@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from functools import wraps
-from typing import Callable, Any, Awaitable
+from typing import Callable, Any, Awaitable, Literal
 
 
 class Middleware(ABC):
     """Abstract base class for all middleware"""
+    phase: Literal["pre_validation", "post_validation"] = "post_validation"
     
     @abstractmethod
     async def handle(self, next_handler: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:
@@ -26,5 +27,4 @@ class Middleware(ABC):
         async def wrapper(*args, **kwargs):
             return await self.handle(func, *args, **kwargs)
         return wrapper
-
 

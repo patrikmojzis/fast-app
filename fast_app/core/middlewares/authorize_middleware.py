@@ -24,6 +24,7 @@ class AuthorizeMiddleware(Middleware):
             async def create_post():
                 ...
     """
+    phase = "pre_validation"
 
     def __init__(
         self,

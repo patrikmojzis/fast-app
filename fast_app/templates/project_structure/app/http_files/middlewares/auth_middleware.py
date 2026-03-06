@@ -17,6 +17,7 @@ from fast_app.utils.datetime_utils import now
 
 class AuthMiddleware(Middleware):
     """Authenticate the user using JWT access tokens and save to g context"""
+    phase = "pre_validation"
 
     async def handle(self, next_handler: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:
         # Get bearer token from request header
