@@ -125,20 +125,40 @@ FastApp ships with helpers for common channels:
 ### Mail
 
 ```python
-from fast_app.integrations.notifications.mail import Mail, MailMessage
+from fast_app.integrations.notifications.mail import Mail, MailAttachment, MailMessage
 
 message = MailMessage(
     subject="Welcome!",
     body="Thanks for signing up.",
-    html="<p>Thanks for signing up.</p>",
+    attachments=[
+        MailAttachment(
+            filename="invoice.pdf",
+            content=b"%PDF-1.4...",
+            content_type="application/pdf",
+        )
+    ],
 )
-await Mail.send("user@example.com", message)
+Mail.send("user@example.com", message)
+```
+
+For Markdown emails with attachments:
+
+```python
+from fast_app.integrations.notifications.mail import Mail, MailAttachment, MarkdownMailMessage
+
+message = MarkdownMailMessage(
+    subject="Your invoice",
+    body="Please find your invoice attached.",
+    attachments=[MailAttachment(filename="invoice.pdf", content=b"%PDF-1.4...")],
+)
+Mail.send("user@example.com", message)
 ```
 
 Configure via environment variables:
 - `MAIL_DRIVER=log|smtp|smtp2go`
 - For `smtp`: `MAIL_SERVER`, `MAIL_PORT`, `MAIL_LOGIN`, `MAIL_PASSWORD`, `MAIL_FROM`
 - For `smtp2go`: `MAIL_FROM`, `SMTP2GO_API_KEY`
+- Optional: `MAIL_MAX_ATTACHMENT_BYTES` to reject oversized attachment payloads before send
 
 ### Expo Push Notifications
 

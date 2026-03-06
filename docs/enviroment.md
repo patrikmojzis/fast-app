@@ -59,6 +59,7 @@ LOG_LEVEL=DEBUG          # defaults to INFO
 
 #### Email notifications
 - `MAIL_DRIVER` (optional): `log` (default), `smtp`, or `smtp2go`.
+- `MAIL_MAX_ATTACHMENT_BYTES` (optional): reject emails whose total attachment payload exceeds this many bytes.
 - If `smtp`:
   - `MAIL_SERVER`
   - `MAIL_PORT`
@@ -116,6 +117,7 @@ SECRET_KEY=dev-secret-key-not-for-production
 # MAIL_LOGIN=
 # MAIL_PASSWORD=
 # MAIL_FROM=
+# MAIL_MAX_ATTACHMENT_BYTES=
 # SMTP2GO_API_KEY=
 # SEND_LOG_ERRORS_SLACK_WEBHOOK_URL=
 # SEND_LOG_ERRORS_TELEGRAM_BOT_TOKEN=
