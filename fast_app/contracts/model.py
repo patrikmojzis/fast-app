@@ -1,4 +1,5 @@
 # app/models/model.py
+from copy import deepcopy
 from datetime import datetime
 from typing import Optional, TypeVar, ClassVar, Any, get_type_hints, get_origin, Self, Dict
 from typing import TYPE_CHECKING
@@ -39,6 +40,7 @@ class Model:
     search_relations: ClassVar[Optional[list[Dict[str, str]]]] = None  # Example: [{"field": "user_id", "model": "User", "search_fields": ["name"]}]
     search_fields: ClassVar[Optional[list[str]]] = None
     indexes: ClassVar[list[Index]] = []
+    compare_normalizers: ClassVar[Dict[str, Any]] = {}
 
     _id: Optional[ObjectId] = None
     created_at: Optional[datetime] = None
@@ -165,11 +167,21 @@ class Model:
         return payload
 
     async def _update(self) -> None:
+        dirty_fields = self.dirty_fields()
+        if not dirty_fields:
+            self.clean = {}
+            return
+
         await self._notify_observer('on_updating')
+        dirty_fields = self.dirty_fields()
+        if not dirty_fields:
+            self.clean = {}
+            return
+
         coll = await self.collection()
         query = await self.query_modifier({'_id': self._id}, "update", self.collection_name())
         update_payload = self._build_update_payload(
-            set_values={key: self.get(key) for key in self.clean.keys()},
+            set_values={key: self.get(key) for key in dirty_fields},
             extra_ops=None,
             touch_timestamp=True,
         )
@@ -422,8 +434,7 @@ class Model:
 
     async def update(self, data: dict[str, Any]) -> Self:
         for key, value in data.items():
-            self.clean[key] = self.get(key)
-            setattr(self, key, value)
+            self.set(key, value)
         await self.save()
         return self
 
@@ -463,16 +474,44 @@ class Model:
             instance = await cls.create({**query, **data})
         return instance
 
-    def is_dirty(self, key: str) -> bool:
+    @staticmethod
+    def _snapshot_value(value: Any) -> Any:
+        try:
+            return deepcopy(value)
+        except Exception:
+            return value
+
+    def _remember_original_value(self, key: str) -> None:
+        if not self.is_touched(key):
+            self.clean[key] = self._snapshot_value(self.get(key))
+
+    def is_touched(self, key: str) -> bool:
         return key in self.clean
+
+    def normalize_for_compare(self, key: str, value: Any) -> Any:
+        normalizer = self.compare_normalizers.get(key)
+        return normalizer(value) if normalizer else value
+
+    def is_dirty(self, key: str) -> bool:
+        if not self.is_touched(key):
+            return False
+
+        original_value = self.normalize_for_compare(key, self.clean[key])
+        current_value = self.normalize_for_compare(key, self.get(key))
+        return current_value != original_value
+
+    def is_pure(self, key: str) -> bool:
+        return not self.is_dirty(key)
+
+    def dirty_fields(self) -> set[str]:
+        return {key for key in self.clean.keys() if self.is_dirty(key)}
 
     def get(self, key: str, default: Any = None) -> Any:
         attr = getattr(self, key, default)
         return attr if attr is not None else default
 
     def set(self, key: str, value: Any) -> None:
-        if not self.is_dirty(key):
-            self.clean[key] = self.get(key)
+        self._remember_original_value(key)
         setattr(self, key, value)
 
     @property
@@ -482,8 +521,7 @@ class Model:
     def __setattr__(self, key: str, value: Any) -> None:
         """Override the default setattr to track changes to the model."""
         if key in self.model_fields().keys():
-            if not self.is_dirty(key):
-                self.clean[key] = self.get(key)
+            self._remember_original_value(key)
 
         super().__setattr__(key, value)
 

@@ -27,7 +27,7 @@ All hooks execute inside the model’s event loop context, so you can await othe
 
 ## Relationship to models
 
-Models keep track of observers via `model.register_observer(observer_instance)`. During lifecycle events, the model invokes the relevant hook on each registered observer. Dirty tracking (`model.clean`) records which fields changed; inside `on_creating`/`on_updating` you can inspect `model.clean` to see the old values.
+Models keep track of observers via `model.register_observer(observer_instance)`. During lifecycle events, the model invokes the relevant hook on each registered observer. `model.clean` stores the original values for touched fields, so observers can inspect both the previous value and the current semantic change state.
 
 ```python
 from fast_app.contracts.observer import Observer
@@ -40,12 +40,18 @@ class LeadObserver(Observer):
             model.name = "Unnamed"
 
     async def on_updating(self, model):
-        previous_email = model.clean.get("email")
-        if previous_email and previous_email != model.email:
+        if model.is_dirty("email"):
+            previous_email = model.clean.get("email")
             await audit_log(model.id, "email_changed", previous_email, model.email)
 ```
 
-After `save()` completes, the model refresh resets `model.clean`, so dirty fields are only available during the hook execution.
+Use:
+
+- `model.is_touched("field")` to check whether a field was assigned
+- `model.is_dirty("field")` to check whether the field actually changed
+- `model.is_pure("field")` to check whether the current value still matches the original
+
+After `save()` completes, the model refresh resets `model.clean`, so touched/original values are only available during the hook execution. Models can also define `compare_normalizers` to customize equality for fields such as `datetime`.
 
 ## Auto-discovery and manual registration
 
@@ -76,5 +82,4 @@ Because hook methods receive the concrete model instance, you can modify attribu
 Any changes made in `on_creating` or `on_updating` become part of the persisted payload. 
 
 Observers provide a single place to centralize domain-side effects tied to persistence, keeping controllers and models lean.
-
 

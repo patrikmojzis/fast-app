@@ -142,10 +142,21 @@ but not `stock_id + date` without `business_id`.
 
 ## Change tracking and persistence
 
-Setting attributes records dirty fields in `self.clean`. `save()` or `update()` writes only changed fields and updates `updated_at`. Successful operations trigger observer hooks and bump the collection cache version, which invalidates cached queries.
+Setting attributes records touched fields in `self.clean`, where each entry stores the original value. Use:
+
+- `model.is_touched("field")` to check whether a field was assigned
+- `model.is_dirty("field")` to check whether the current value is meaningfully different from the original value
+- `model.is_pure("field")` to check whether the current value still matches the original value
+- `model.dirty_fields()` to get the set of fields with actual changes
+
+`save()` and `update()` only write actual dirty fields and update `updated_at`. If no actual changes remain, the update is treated as a no-op. Models can customize equality per field with `compare_normalizers`.
 
 ```python
 user.set("name", "Alice")
+
+if user.is_dirty("name"):
+    ...
+
 await user.save()
 
 await User.update_many({"active": False}, {"$set": {"active": True}})
