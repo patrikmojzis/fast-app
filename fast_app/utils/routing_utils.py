@@ -41,19 +41,22 @@ def resolve_middleware(middleware: Middleware | Type[Middleware] | Callable) -> 
 
 def split_route_middlewares_by_phase(
     middlewares: list[Middleware | Type[Middleware] | Callable] | None,
-) -> tuple[list[Middleware | Callable], list[Middleware | Callable]]:
+) -> tuple[list[Middleware | Callable], list[Middleware | Callable], list[Middleware | Callable]]:
+    pre_binding: list[Middleware | Callable] = []
     pre_validation: list[Middleware | Callable] = []
     post_validation: list[Middleware | Callable] = []
 
     for middleware in middlewares or []:
         resolved = resolve_middleware(middleware)
         phase = getattr(resolved, "phase", "post_validation")
-        if phase == "pre_validation":
+        if phase == "pre_binding":
+            pre_binding.append(cast(Middleware | Callable, resolved))
+        elif phase == "pre_validation":
             pre_validation.append(cast(Middleware | Callable, resolved))
         else:
             post_validation.append(cast(Middleware | Callable, resolved))
 
-    return pre_validation, post_validation
+    return pre_binding, pre_validation, post_validation
 
 def register_routes(app: Quart, routes: List['Route']) -> None:
     """Register routes with the Quart application (HTTP only)."""
@@ -70,15 +73,17 @@ def register_routes(app: Quart, routes: List['Route']) -> None:
         # Always add handle_exceptions as the first middleware, resource conversion as the last
         # Global middlewares order:
         # 1) HandleExceptionsMiddleware (first)
-        # 2) ModelBindingMiddleware
-        # 3) Route-specific pre-validation middlewares (user-defined)
-        # 4) SchemaValidationMiddleware
-        # 5) Route-specific post-validation middlewares (user-defined, default)
-        # 5) ResourceResponseMiddleware (last)
-        pre_validation_middlewares, post_validation_middlewares = split_route_middlewares_by_phase(route.middlewares)
+        # 2) Route-specific pre-binding middlewares (user-defined)
+        # 3) ModelBindingMiddleware
+        # 4) Route-specific pre-validation middlewares (user-defined)
+        # 5) SchemaValidationMiddleware
+        # 6) Route-specific post-validation middlewares (user-defined, default)
+        # 7) ResourceResponseMiddleware (last)
+        pre_binding_middlewares, pre_validation_middlewares, post_validation_middlewares = split_route_middlewares_by_phase(route.middlewares)
 
         all_middlewares: list[Middleware | Type[Middleware] | Callable] = [
             HandleExceptionsMiddleware,
+            *pre_binding_middlewares,
             ModelBindingMiddleware,
             *pre_validation_middlewares,
             SchemaValidationMiddleware,

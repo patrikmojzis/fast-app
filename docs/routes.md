@@ -101,7 +101,7 @@ if __name__ == "__main__":
     app.run()
 ```
 
-`register_routes` injects global middlewares in the following order: `HandleExceptionsMiddleware`, `ModelBindingMiddleware`, `SchemaValidationMiddleware`, user-specified middlewares, and finally `ResourceResponseMiddleware`. This ensures consistent request handling regardless of where your routes live.
+`register_routes` injects middleware in the following order: `HandleExceptionsMiddleware`, user `pre_binding` middlewares, `ModelBindingMiddleware`, user `pre_validation` middlewares, `SchemaValidationMiddleware`, user default/post-validation middlewares, and finally `ResourceResponseMiddleware`. Use `phase = "pre_binding"` for authentication or request-context middleware that must reject before model resolution; keep model-dependent middleware such as `AuthorizeMiddleware("update", "post")` and `BelongsToMiddleware(...)` in `pre_validation`.
 
 ## Recommended project structure
 
@@ -120,5 +120,4 @@ app/
 ```
 
 Import `routes` from that module inside your Quart entry point (e.g., `app/modules/asgi/app.py`) to keep the route table declarative and discoverable.
-
 

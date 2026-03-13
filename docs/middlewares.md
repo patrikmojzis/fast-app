@@ -1,6 +1,6 @@
 # Middlewares
 
-Fast App ships with a collection of route middleware that help you compose behaviour around your handlers. Each middleware is applied through the `@middleware` decorator and receives the fully-bound handler arguments. This section covers four core middlewares you are likely to use in production.
+Fast App ships with a collection of route middleware that help you compose behaviour around your handlers. Most route middleware runs after model binding and receives bound handler arguments. Middleware that sets `phase = "pre_binding"` runs earlier and sees raw route kwargs before model resolution. This section covers four core middlewares you are likely to use in production.
 
 ## AuthorizeMiddleware
 
