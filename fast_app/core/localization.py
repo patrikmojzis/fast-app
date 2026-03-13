@@ -18,9 +18,11 @@ Usage:
 """
 
 import json
-from pathlib import Path
-from typing import Dict, Any, Optional
 import os
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Dict, Any, Iterator, Optional
+
 from fast_app.core.context import define_key, context
 
 # Module state - elegant simplicity
@@ -108,6 +110,17 @@ def set_locale(locale: str) -> None:
 def get_locale() -> str:
     """Get the current locale. Pure simplicity."""
     return context.get(_LocaleKey, _LOCALE_DEFAULT)
+
+
+@contextmanager
+def use_locale(locale: str) -> Iterator[None]:
+    """Temporarily override the locale for the current task/request context."""
+    previous_locale = get_locale()
+    set_locale(locale)
+    try:
+        yield
+    finally:
+        set_locale(previous_locale)
 
 
 def clear_cache() -> None:
