@@ -31,6 +31,22 @@ message = __("messages.welcome", {"name": "Alice"}, default="Hello {name}")
 - `__()` looks up the key using dot notation, applies the parameters with `str.format`, and falls back to the key (or `default=`) when nothing is found.
 - Passing `locale="es"` lets me force a one-off translation without touching the global context.
 
+### Use natural keys
+- `__()` also supports natural keys (text-as-key), so I can translate literal source strings directly:
+
+  ```json
+  {
+    "Welcome aboard": "Vitajte na palube"
+  }
+  ```
+
+  ```python
+  __("Welcome aboard")  # "Vitajte na palube" in `sk`, "Welcome aboard" if missing
+  ```
+
+- If the active locale and fallback locale both miss the translation, `__()` returns the original key unless I pass `default=...`.
+- Limitation: keys containing dots are treated as nested paths. That means `"messages.welcome"` resolves `{"messages": {"welcome": "..."}}`, not a literal key named `"messages.welcome"`.
+
 ### Handle plurals
 - `trans_choice("cart_count", count, {"count": count})` automatically checks `cart_count_plural` when `count != 1` and otherwise reuses `cart_count`.
 
