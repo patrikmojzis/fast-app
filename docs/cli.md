@@ -6,6 +6,7 @@ FastApp ships with a modular CLI. Run `fast-app -h` from a project root to list 
 - `make` — generate code from templates (models, resources, middlewares, etc.)
 - `publish` — copy optional feature modules (socketio, notification channels)
 - `migrate` / `seed` — execute your app-level database migrations and seeders
+- `mongo` — inspect MongoDB activity, temporary profiler findings, and candidate index suggestions
 - `indexes` — inspect and synchronize MongoDB indexes declared on models
 - `serve` — run the development ASGI server via Hypercorn with auto-reload
 - `work` — start the async_farm worker supervisor (with optional TUI)
@@ -77,6 +78,38 @@ Override the migrations directory with `--path` (relative to the project root):
 ```bash
 fast-app migrate AddIndexToUsers --path app/db/migrations
 ```
+
+### `fast-app mongo`
+
+Inspect MongoDB activity with a coarse stats window or capture grouped profiler findings with tighter candidate index suggestions.
+
+For a workflow-oriented guide with interpretation notes and common recipes, see `docs/mongo.md`.
+
+```bash
+fast-app mongo stats
+fast-app mongo stats --seconds 5 --limit 10
+fast-app mongo profile --dangerously-enable-profiler --seconds 15
+fast-app mongo profile --dangerously-enable-profiler --capture-all --include-writes --json
+```
+
+`stats` samples `serverStatus` and `top` over a bounded time window and prints both global Mongo counters and the totals for the displayed namespace rows. It is best used as a low-overhead activity sampler, not as the final word on index bottlenecks.
+
+If you want to trigger reads during the sampling window, wait for the stderr line `Mongo activity sampling started for <db>...` before generating traffic.
+
+`profile` temporarily changes the selected database profiler level for the requested window, waits briefly for profiler rows to flush, reads a bounded slice of matching `system.profile` rows, groups recurring query shapes, applies namespace and threshold filters, suppresses obviously redundant index suggestions, and records when a finding is already covered by an existing index prefix. Because that change is intrusive and database-wide for the selected database, `profile` requires `--dangerously-enable-profiler`.
+
+When you need to trigger traffic from another terminal or agent command, wait for the stderr line `Mongo profiler enabled for <db>...` before starting reads or writes you want to observe.
+
+Useful options:
+- `--database` overrides `DB_NAME` / `TEST_DB_NAME`
+- `--namespace` / `--exclude-namespace` focus on specific collections such as `lead` or `db.lead`
+- `--json` prints structured JSON for scripts and AI agents
+- `--limit` keeps the output bounded
+- `--max-profile-docs` caps how many profiler rows are scanned from the selected window
+- `--only-collection-scans`, `--only-suggestions`, `--min-count`, `--min-docs-examined`, and `--min-scan-ratio` help isolate suspicious findings on noisy apps
+- human-readable profiler output also prints existing-index notes for visible findings that were suppressed as redundant suggestions
+- `--capture-all` switches from slow-op profiling to full capture for the window
+- `--include-writes` includes write operations in grouped profiler findings
 
 ### `fast-app indexes`
 

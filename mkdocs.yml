@@ -23,6 +23,7 @@ nav:
       - Environment: enviroment.md
       - API: api.md
       - CLI: cli.md
+      - Mongo Diagnostics: mongo.md
       - Middlewares: middlewares.md
       - Queue: queue.md
       - Locks: locks.md

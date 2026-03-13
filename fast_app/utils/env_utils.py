@@ -1,3 +1,4 @@
+import importlib
 import json
 import logging
 import os
@@ -29,6 +30,30 @@ def configure_env(env_file_name: Optional[str] = None) -> None:
         print("🚫 Loading env file failed.")
         print(f"Create .env file in your project root.")
         print("For specific environment, create .env.<environment> file.")
+
+
+def configure_env_from_app_config() -> None:
+    """
+    Configure environment files the same way FastApp boot does, without running full boot.
+
+    This is intended for lightweight CLI commands that need project-specific env resolution
+    (for example `app.app_config.env_file_name`) but should avoid autodiscovery and other
+    boot-time side effects.
+    """
+    configure_env()
+
+    try:
+        spec = importlib.util.find_spec("app.app_config")
+    except ModuleNotFoundError:
+        return
+
+    if spec is None:
+        return
+
+    config_module = importlib.import_module("app.app_config")
+    env_file_name = getattr(config_module, "env_file_name", None)
+    if env_file_name is not None:
+        configure_env(env_file_name)
 
 
 TRUE_VALUES: Final = frozenset(("1", "true", "yes", "on"))

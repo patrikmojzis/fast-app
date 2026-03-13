@@ -8,6 +8,7 @@ from .indexes_command import IndexesCommand
 from .init_command import InitCommand
 from .make_command import MakeCommand
 from .migrate_command import MigrateCommand
+from .mongo_command import MongoCommand
 from .publish_command import PublishCommand
 from .seed_command import SeedCommand
 from .serve_command import ServeCommand
@@ -33,6 +34,7 @@ def main() -> None:
         ServeCommand(),
         SeedCommand(),
         MigrateCommand(),
+        MongoCommand(),
         IndexesCommand(),
         VersionCommand(),
     ]

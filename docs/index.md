@@ -24,4 +24,5 @@ Then open `http://localhost:8000`.
 
 - Start with the Getting Started section in the sidebar
 - Review Routes, Schemas, Models, and Resources to build your API
+- Use `docs/mongo.md` when you need to inspect MongoDB activity or hunt for index candidates
 - See Hosting when you are ready to deploy
