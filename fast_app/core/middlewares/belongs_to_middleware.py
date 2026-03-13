@@ -106,4 +106,3 @@ class BelongsToMiddleware(Middleware):
                 return value
 
         return value
-

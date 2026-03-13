@@ -1,8 +1,7 @@
 import importlib
-from typing import Any, Callable, Dict, List, Type, Optional, TYPE_CHECKING
-
 import os
 import sys
+from typing import Any, Callable, Dict, List, Type, Optional, TYPE_CHECKING
 
 from fast_app.application import Application
 from fast_app.core.storage import Storage
