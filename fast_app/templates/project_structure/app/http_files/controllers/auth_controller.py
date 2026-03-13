@@ -4,6 +4,9 @@ from app.models.auth import Auth
 from app.models.user import User
 from quart import g, Response
 
+from fast_app import decode_token, now
+from fast_app.core.jwt_auth import REFRESH_TOKEN_TYPE
+from fast_app.exceptions import AuthException
 from fast_app.exceptions.http_exceptions import UnauthorizedException
 
 
@@ -11,7 +14,7 @@ from fast_app.exceptions.http_exceptions import UnauthorizedException
 #     """
 #     Login endpoint - creates a new refresh token for the user.
 #     """
-#     user = await login_user(**g.validated)
+#     user = await login_user(**data.validated)
     
 #     auth = await Auth.create({
 #         'user_id': user.id,
@@ -25,8 +28,17 @@ async def refresh(data: AuthRefreshSchema):
     """
     Refresh token endpoint - exchanges refresh token for new access token.
     """
+    try:
+        decode_token(data.refresh_token, token_type=REFRESH_TOKEN_TYPE)
+    except AuthException:
+        raise UnauthorizedException()
+
     auth = await Auth.find_one({'refresh_token': data.refresh_token, 'is_revoked': {"$ne": True}})
     if not auth:
+        raise UnauthorizedException()
+
+    if auth.expires_at and auth.expires_at <= now():
+        await auth.revoke()
         raise UnauthorizedException()
     
     new_auth = await Auth.create({
@@ -55,4 +67,3 @@ async def logout_all():
     await g.auth.revoke_all()
 
     return Response(status=204)
-
