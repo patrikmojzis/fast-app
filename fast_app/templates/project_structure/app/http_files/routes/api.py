@@ -7,8 +7,8 @@ routes = [
     # Authentication routes
     Route.group("/auth", routes=[
         Route.post("/refresh", auth_controller.refresh),
-        Route.get("/logout", auth_controller.logout, [AuthMiddleware]),
-        Route.get("/logout-all", auth_controller.logout_all, [AuthMiddleware]),
+        Route.post("/logout", auth_controller.logout, [AuthMiddleware]),
+        Route.post("/logout-all", auth_controller.logout_all, [AuthMiddleware]),
     ]),
     
     # User routes (protected)
