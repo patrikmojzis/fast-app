@@ -5,6 +5,7 @@ Supports both legacy functions and new contract-based migrations.
 
 import argparse
 import importlib.util
+import inspect
 from pathlib import Path
 from types import ModuleType
 from typing import Callable, Optional, Any
@@ -50,7 +51,11 @@ class MigrateCommand(CommandBase):
             return
 
         # Prefer new contract class; fallback to functions
-        contract = self._resolve_contract(module, migration_name)
+        try:
+            contract = self._resolve_contract(module, migration_name)
+        except ValueError as exc:
+            print(f"❌ {exc}")
+            return
         if contract is not None:
             return self._run_contract(contract, migration_name)
 
@@ -63,7 +68,10 @@ class MigrateCommand(CommandBase):
                 print(f"❌ Migration failed: {exc}")
             return
 
-        print("❌ No migration entry found. Provide a Migration class with async migrate(), or legacy `migrate()`/`run()`.")
+        print(
+            "❌ No migration entry found. Provide a Migration class with async migrate(), "
+            "a single local Migration subclass, or legacy `migrate()`/`run()`."
+        )
 
     def _load_module(self, path: Path) -> Optional[ModuleType]:
         spec = importlib.util.spec_from_file_location(path.stem, path)
@@ -94,15 +102,34 @@ class MigrateCommand(CommandBase):
         return None
 
     def _resolve_contract(self, module: ModuleType, migration_name: str) -> Optional[Migration]:
-        # Class named migration_name implements Migration
-        cls = getattr(module, migration_name, None)
-        if isinstance(cls, type) and issubclass(cls, Migration):
-            return cls()  # type: ignore[call-arg]
-        # Fallback: class named Migration
-        cls2 = getattr(module, "Migration", None)
-        if isinstance(cls2, type) and issubclass(cls2, Migration):
-            return cls2()  # type: ignore[call-arg]
+        for class_name in (migration_name, "Migration"):
+            cls = getattr(module, class_name, None)
+            if self._is_contract_candidate(cls, module):
+                return cls()  # type: ignore[call-arg]
+
+        candidates = [
+            value
+            for value in vars(module).values()
+            if self._is_contract_candidate(value, module)
+        ]
+        if len(candidates) == 1:
+            return candidates[0]()  # type: ignore[call-arg]
+        if len(candidates) > 1:
+            names = ", ".join(sorted(candidate.__name__ for candidate in candidates))
+            raise ValueError(
+                "Multiple migration classes found in the module. "
+                f"Use a class named '{migration_name}' or 'Migration'. Candidates: {names}."
+            )
         return None
+
+    def _is_contract_candidate(self, value: object, module: ModuleType) -> bool:
+        return (
+            isinstance(value, type)
+            and value is not Migration
+            and issubclass(value, Migration)
+            and value.__module__ == module.__name__
+            and not inspect.isabstract(value)
+        )
 
     def _run_contract(self, contract: Migration, migration_name: str) -> None:
         import asyncio
@@ -114,4 +141,3 @@ class MigrateCommand(CommandBase):
             print(f"✅ Migration executed: {migration_name}")
         except Exception as exc:  # noqa: BLE001
             print(f"❌ Migration failed: {exc}")
-

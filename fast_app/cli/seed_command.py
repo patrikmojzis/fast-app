@@ -5,6 +5,7 @@ Supports both legacy functions and new contract-based seeders.
 
 import argparse
 import importlib.util
+import inspect
 from pathlib import Path
 from types import ModuleType
 from typing import Callable, Optional, Any
@@ -50,7 +51,11 @@ class SeedCommand(CommandBase):
             return
 
         # Prefer new contract class; fallback to functions
-        contract = self._resolve_contract(module, seeder_name)
+        try:
+            contract = self._resolve_contract(module, seeder_name)
+        except ValueError as exc:
+            print(f"❌ {exc}")
+            return
         if contract is not None:
             return self._run_contract(contract, seeder_name)
 
@@ -63,7 +68,10 @@ class SeedCommand(CommandBase):
                 print(f"❌ Seeder failed: {exc}")
             return
 
-        print("❌ No seeder entry found. Provide a Seeder class with async seed(), or legacy `seed()`/`run()`.")
+        print(
+            "❌ No seeder entry found. Provide a Seeder class with async seed(), "
+            "a single local Seeder subclass, or legacy `seed()`/`run()`."
+        )
 
     def _load_module(self, path: Path) -> Optional[ModuleType]:
         spec = importlib.util.spec_from_file_location(path.stem, path)
@@ -91,15 +99,34 @@ class SeedCommand(CommandBase):
         return None
 
     def _resolve_contract(self, module: ModuleType, seeder_name: str) -> Optional[Seeder]:
-        # Class named seeder_name implements Seeder
-        cls = getattr(module, seeder_name, None)
-        if isinstance(cls, type) and issubclass(cls, Seeder):
-            return cls()  # type: ignore[call-arg]
-        # Fallback: class named Seeder
-        cls2 = getattr(module, "Seeder", None)
-        if isinstance(cls2, type) and issubclass(cls2, Seeder):
-            return cls2()  # type: ignore[call-arg]
+        for class_name in (seeder_name, "Seeder"):
+            cls = getattr(module, class_name, None)
+            if self._is_contract_candidate(cls, module):
+                return cls()  # type: ignore[call-arg]
+
+        candidates = [
+            value
+            for value in vars(module).values()
+            if self._is_contract_candidate(value, module)
+        ]
+        if len(candidates) == 1:
+            return candidates[0]()  # type: ignore[call-arg]
+        if len(candidates) > 1:
+            names = ", ".join(sorted(candidate.__name__ for candidate in candidates))
+            raise ValueError(
+                "Multiple seeder classes found in the module. "
+                f"Use a class named '{seeder_name}' or 'Seeder'. Candidates: {names}."
+            )
         return None
+
+    def _is_contract_candidate(self, value: object, module: ModuleType) -> bool:
+        return (
+            isinstance(value, type)
+            and value is not Seeder
+            and issubclass(value, Seeder)
+            and value.__module__ == module.__name__
+            and not inspect.isabstract(value)
+        )
 
     def _run_contract(self, contract: Seeder, seeder_name: str) -> None:
         import asyncio
@@ -111,4 +138,3 @@ class SeedCommand(CommandBase):
             print(f"✅ Seeder executed: {seeder_name}")
         except Exception as exc:  # noqa: BLE001
             print(f"❌ Seeder failed: {exc}")
-
