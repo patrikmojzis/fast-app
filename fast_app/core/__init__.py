@@ -7,7 +7,6 @@ from fast_validation import Schema, ValidatorRule
 
 from .api import (
     get_client_ip,
-    get_mongo_filter_from_query,
     validate_request,
     validate_query,
     get_bearer_token,
@@ -39,7 +38,6 @@ from .validation_rules.unique_validator_rule import UniqueValidatorRule, Unique
 __all__ = [
     # api
     "get_client_ip",
-    "get_mongo_filter_from_query",
     "validate_request",
     "validate_query",
     "get_bearer_token",

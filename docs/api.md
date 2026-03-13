@@ -111,31 +111,6 @@ async def index(filter: LeadIndexFilter):
 
 Unset fields are excluded, so only provided filters apply.
 
-### `get_mongo_filter_from_query(*, param_name="filter", allowed_fields=None, allowed_ops=None)`
-
-Parse a JSON (or base64-JSON) Mongo filter from the query string with strict operator and field allowlists.
-
-```python
-from fast_app.core.api import get_mongo_filter_from_query
-
-async def advanced_index():
-    extra_filter = get_mongo_filter_from_query(
-        allowed_fields=["name", "tags", "created_at"],
-        allowed_ops=["$eq", "$in", "$gte", "$lte"],
-    )
-    return await list_paginated(Item, ItemResource, filter=extra_filter)
-```
-
-Clients can send complex queries:
-
-```
-?filter={"name":{"$in":["A","B"]},"created_at":{"$gte":"2024-01-01"}}
-```
-
-or base64-encoded for URL safety. The helper validates operators/fields and raises `UnprocessableEntityException` if disallowed constructs appear.
-
-Default allowed operators include `$and`, `$or`, `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$exists`, `$regex`, `$size`, `$all`, `$elemMatch`.
-
 ## Request helpers
 
 ### `get_client_ip()`
@@ -168,7 +143,6 @@ Raises `AppException` if called outside a request context.
 ## Tips
 
 - Use `partial=True` in `validate_request` / `validate_query` for PATCH endpoints to skip unset fields.
-- Combine schema filters with `get_mongo_filter_from_query` for admin endpoints that need flexible querying.
 - Pagination helpers run `model.count()` and `model.find()` concurrently via `asyncio.gather` for better performance.
 - Schema-based filters leverage async rule validation, so you can enforce relational constraints (e.g., `ExistsValidatorRule`) before hitting the database.
 

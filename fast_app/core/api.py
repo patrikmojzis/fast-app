@@ -9,7 +9,6 @@ from quart import request, has_request_context, g
 
 from fast_app.exceptions.common_exceptions import AppException
 from fast_app.exceptions.http_exceptions import UnprocessableEntityException
-from fast_app.utils.api_filters import parse_user_filter
 from fast_app.utils.api_utils import is_list_type, collect_list_values
 
 if TYPE_CHECKING:
@@ -288,39 +287,3 @@ async def validate_query(schema: type[S], *, partial: bool = False) -> S:
     validated = instance.model_dump(exclude_unset=partial)
     g.validated_query = validated
     return instance
-
-def get_mongo_filter_from_query(
-    *,
-    param_name: str = "filter",
-    allowed_fields: list[str] | None = None,
-    allowed_ops: list[str] | None = None,
-) -> dict:
-    """Parse a JSON (or base64-JSON) filter from the query string safely.
-
-    Accepts any nested Mongo-like structure, but enforces operator and field
-    allowlists to prevent unsafe queries.
-
-    Args:
-        param_name: Query parameter name that carries the filter (default: "filter").
-        allowed_fields: Optional list of allowed field paths (top-level allows dotted subpaths).
-        allowed_ops: Optional list of allowed operators (defaults to a safe subset).
-
-    Returns:
-        A sanitized dictionary representing the Mongo filter.
-
-    Raises:
-        UnprocessableEntityException: If the filter is invalid or uses disallowed fields/ops.
-    """
-
-    raw = request.args.get(param_name)
-    try:
-        return parse_user_filter(
-            raw=raw,
-            allowed_fields=set(allowed_fields) if allowed_fields else None,
-            allowed_ops=set(allowed_ops) if allowed_ops else None,
-        )
-    except ValueError as exc:
-        raise UnprocessableEntityException(
-            error_type="invalid_query",
-            message=f"Invalid filter in query parameter '{param_name}'.",
-        )
