@@ -28,7 +28,7 @@ from .jwt_auth import (
     REFRESH_TOKEN_LIFETIME,
     ACCESS_TOKEN_TYPE,
 )
-from .localization import __, set_locale, get_locale, use_locale, trans, trans_choice
+from .localization import __, set_locale, get_locale, use_locale, translator, trans, trans_choice
 from .lock import RedisDistributedLock, redis_lock
 from .queue import queue
 from .stopwatch import Stopwatch
@@ -62,6 +62,7 @@ __all__ = [
     "set_locale",
     "get_locale",
     "use_locale",
+    "translator",
     "trans",
     "trans_choice",
     # queue/simple controller/stopwatch

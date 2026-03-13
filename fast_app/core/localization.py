@@ -21,7 +21,7 @@ import json
 import os
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, Any, Iterator, Optional
+from typing import Callable, Dict, Any, Iterator, Optional
 
 from fast_app.core.context import define_key, context
 
@@ -121,6 +121,22 @@ def use_locale(locale: str) -> Iterator[None]:
         yield
     finally:
         set_locale(previous_locale)
+
+
+def translator(*, prefix: Optional[str] = None, locale: Optional[str] = None) -> Callable[..., str]:
+    """Create a translator bound to an optional key prefix and locale."""
+    normalized_prefix = prefix.strip(".") if prefix else None
+
+    def translate(
+        key: str,
+        parameters: Optional[Dict[str, Any]] = None,
+        default: Optional[str] = None,
+        locale_override: Optional[str] = None,
+    ) -> str:
+        full_key = f"{normalized_prefix}.{key}" if normalized_prefix and key else normalized_prefix or key
+        return __(full_key, parameters, default=default, locale=locale_override or locale)
+
+    return translate
 
 
 def clear_cache() -> None:

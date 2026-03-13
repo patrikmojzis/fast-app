@@ -53,6 +53,65 @@ def test_use_locale_restores_previous_locale(tmp_path):
     assert localization.__("title") == "Hello"
 
 
+def test_translator_binds_prefix_and_locale(tmp_path):
+    localization = _load_localization(
+        tmp_path,
+        {
+            "en": {
+                "notifications": {
+                    "order_attachment_uploaded": {
+                        "subject": "Order attachment uploaded",
+                    }
+                }
+            },
+            "sk": {
+                "notifications": {
+                    "order_attachment_uploaded": {
+                        "subject": "Priloha objednavky nahrana",
+                    }
+                }
+            },
+        },
+    )
+
+    translate = localization.translator(
+        prefix="notifications.order_attachment_uploaded",
+        locale="sk",
+    )
+
+    assert translate("subject") == "Priloha objednavky nahrana"
+    assert translate("missing") == "notifications.order_attachment_uploaded.missing"
+
+
+def test_translator_uses_current_locale_context_by_default(tmp_path):
+    localization = _load_localization(
+        tmp_path,
+        {
+            "en": {
+                "notifications": {
+                    "order_attachment_uploaded": {
+                        "subject": "Order attachment uploaded",
+                    }
+                }
+            },
+            "sk": {
+                "notifications": {
+                    "order_attachment_uploaded": {
+                        "subject": "Priloha objednavky nahrana",
+                    }
+                }
+            },
+        },
+    )
+
+    translate = localization.translator(prefix="notifications.order_attachment_uploaded")
+
+    assert translate("subject") == "Order attachment uploaded"
+
+    with localization.use_locale("sk"):
+        assert translate("subject") == "Priloha objednavky nahrana"
+
+
 @pytest.mark.asyncio
 async def test_use_locale_isolated_between_parallel_tasks(tmp_path):
     localization = _load_localization(

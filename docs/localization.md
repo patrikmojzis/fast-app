@@ -23,18 +23,23 @@ Drop translations into JSON files and reach for them anywhere in my app with a t
 
 ### Translate in code
 ```python
-from fast_app.core.localization import __, set_locale, use_locale
+from fast_app.core.localization import __, set_locale, use_locale, translator
 
 set_locale("en")
 message = __("messages.welcome", {"name": "Alice"}, default="Hello {name}")
 
 with use_locale("sk"):
     preview = __("Welcome aboard")
+
+t = translator(prefix="notifications.order_attachment_uploaded", locale="sk")
+subject = t("subject")
 ```
 - `__()` looks up the key using dot notation, applies the parameters with `str.format`, and falls back to the key (or `default=`) when nothing is found.
 - Passing `locale="es"` lets me force a one-off translation without touching the global context.
 - `use_locale("sk")` temporarily overrides the locale for the current task/request context and restores the previous value when the block exits, even if an exception is raised.
 - Work spawned inside that block inherits the current locale context. That means child tasks, queued jobs, or listeners created there will typically keep that locale too.
+- `translator(prefix="notifications.order_attachment_uploaded")` returns a small helper that prepends the prefix for me, so `t("subject")` resolves `notifications.order_attachment_uploaded.subject`.
+- If I omit `locale=`, the returned translator uses the current locale context at call time.
 
 ### Use natural keys
 - `__()` also supports natural keys (text-as-key), so I can translate literal source strings directly:
