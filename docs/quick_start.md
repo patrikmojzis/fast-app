@@ -30,6 +30,7 @@ app/
     controllers/          # Request handlers
     resources/            # Response transformers
     schemas/              # Request validators
+    rules/                # Custom validation rules
     middlewares/          # Custom middleware
     routes/
       api.py             # Route definitions

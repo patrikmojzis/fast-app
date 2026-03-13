@@ -55,3 +55,33 @@ def test_make_schema_from_suffixed_name_includes_partial_schema(tmp_path, monkey
     assert "class ModelSchema(Schema):" in content
     assert "@from_schema(ModelSchema, partial=True)" in content
     assert "class ModelPartialSchema(Schema):" in content
+
+
+def test_make_rule_uses_http_files_rules_directory(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    command = MakeCommand()
+    args = argparse.Namespace(type="rule", name="LongitudeRule", path=None)
+
+    command.execute(args)
+
+    generated = Path("app/http_files/rules/longitude_rule.py")
+    assert generated.exists()
+
+    content = generated.read_text(encoding="utf-8")
+    assert "class LongitudeRule(ValidatorRule):" in content
+
+
+def test_make_validator_rule_alias_uses_http_files_rules_directory(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    command = MakeCommand()
+    args = argparse.Namespace(type="validator_rule", name="longitude_rule", path=None)
+
+    command.execute(args)
+
+    generated = Path("app/http_files/rules/longitude_rule.py")
+    assert generated.exists()
+
+    content = generated.read_text(encoding="utf-8")
+    assert "class LongitudeRule(ValidatorRule):" in content

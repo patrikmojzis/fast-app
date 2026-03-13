@@ -31,14 +31,20 @@ class MakeCommand(CommandBase):
         'policy': 'app/policies',
         'resource': 'app/http_files/resources',
         'schema': 'app/http_files/schemas',
+        'rule': 'app/http_files/rules',
         'middleware': 'app/http_files/middlewares',
         'storage_driver': 'app/storage_drivers',
-        'validator_rule': 'app/rules',
         'factory': 'app/db/factories',
         'seeder': 'app/db/seeders',
         'migration': 'app/db/migrations',
         'command': 'app/cli',
         'room': 'app/socketio/rooms',
+    }
+    TYPE_ALIASES = {
+        'validator_rule': 'rule',
+    }
+    TEMPLATE_TYPES = {
+        'rule': 'validator_rule',
     }
     
     @property
@@ -60,12 +66,16 @@ class MakeCommand(CommandBase):
     
     def execute(self, args: argparse.Namespace) -> None:
         """Create file from template."""
-        if args.type not in self.TYPE_PATHS:
+        file_type = self.TYPE_ALIASES.get(args.type, args.type)
+
+        if file_type not in self.TYPE_PATHS:
+            available_types = list(self.TYPE_PATHS.keys()) + list(self.TYPE_ALIASES.keys())
             print(f"❌ Unknown type: {args.type}")
-            print(f"Available: {', '.join(self.TYPE_PATHS.keys())}")
+            print(f"Available: {', '.join(available_types)}")
             return
         
-        template_path = TEMPLATES_PATH / "make" / f"{args.type}.py"
+        template_type = self.TEMPLATE_TYPES.get(file_type, file_type)
+        template_path = TEMPLATES_PATH / "make" / f"{template_type}.py"
         if not template_path.exists():
             print(f"❌ Template not found: {template_path}")
             return
@@ -79,9 +89,9 @@ class MakeCommand(CommandBase):
             class_name = snake_case_to_pascal_case(args.name)
             file_name = args.name if is_snake_case(args.name) else pascal_case_to_snake_case(class_name)
         
-        content = self._process_template(template_path, args.type, class_name, file_name)
+        content = self._process_template(template_path, file_type, class_name, file_name)
         try:
-            dest_dir = resolve_cli_path(args.path, self.TYPE_PATHS[args.type])
+            dest_dir = resolve_cli_path(args.path, self.TYPE_PATHS[file_type])
         except ValueError as exc:
             print(f"❌ {exc}")
             return
@@ -94,7 +104,7 @@ class MakeCommand(CommandBase):
         dest_file.parent.mkdir(parents=True, exist_ok=True)
         dest_file.write_text(content, encoding='utf-8')
         
-        print(f"✅ Created {args.type}: {dest_file}")
+        print(f"✅ Created {file_type}: {dest_file}")
     
     def _process_template(self, template_path: Path, file_type: str, class_name: str, file_name: str) -> str:
         """Process template with class name replacement."""
