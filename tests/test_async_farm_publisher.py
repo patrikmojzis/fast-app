@@ -57,6 +57,7 @@ class DummyConnection:
 
 @pytest.mark.asyncio
 async def test_enqueue_callable_signs_job_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ASYNC_FARM_SIGNING_KEY", "async-farm-secret")
     await publisher._close_publisher_pools()
     exchange = DummyExchange()
     connections: list[DummyConnection] = []
@@ -132,4 +133,3 @@ async def test_close_publisher_pools_recreates_transport(monkeypatch: pytest.Mon
         assert len(exchange.published) == 2
     finally:
         await publisher._close_publisher_pools()
-

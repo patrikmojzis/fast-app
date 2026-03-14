@@ -30,6 +30,7 @@ class FakeAsyncRedis:
 
 @pytest.mark.asyncio
 async def test_cache_rejects_tampered_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CACHE_SIGNING_KEY", "cache-secret")
     fake = FakeAsyncRedis()
     monkeypatch.setattr("fast_app.core.cache.r", fake)
 
@@ -37,5 +38,16 @@ async def test_cache_rejects_tampered_payload(monkeypatch: pytest.MonkeyPatch) -
     assert await Cache.get("user") == {"id": 1}
 
     fake.store["user"] = b"not-a-valid-signed-payload"
+    assert await Cache.get("user", default="fallback") == "fallback"
+    assert "user" not in fake.store
+
+
+@pytest.mark.asyncio
+async def test_cache_rejects_corrupted_unsigned_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("CACHE_SIGNING_KEY", raising=False)
+    fake = FakeAsyncRedis()
+    fake.store["user"] = b"not-a-pickle"
+    monkeypatch.setattr("fast_app.core.cache.r", fake)
+
     assert await Cache.get("user", default="fallback") == "fallback"
     assert "user" not in fake.store

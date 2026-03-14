@@ -46,8 +46,10 @@ LOG_LEVEL=DEBUG          # defaults to INFO
 
 #### Redis (host/port shared)
 - `REDIS_CACHE_URL` (optional): Default `redis://localhost:6379/15`.
+- `CACHE_SIGNING_KEY` (optional): Enables HMAC signing for `fast_app.core.cache` payloads. If unset, cache values are stored as raw pickled bytes.
 - `REDIS_SOCKETIO_URL` (optional): Default `redis://localhost:6379/14`.
 - `REDIS_DATABASE_CACHE_URL` (optional): Default `redis://localhost:6379/13`.
+- `DB_CACHE_SIGNING_KEY` (optional): Enables HMAC signing for versioned DB cache payloads. If unset, DB cache values are stored as raw pickled bytes.
 - `REDIS_SCHEDULER_URL` (optional): Default `redis://localhost:6379/12`.
 - `REDIS_LOCK_URL` (optional): Dedicated distributed lock Redis URL. If not set, lock APIs fall back to `REDIS_SCHEDULER_URL`, then `REDIS_CACHE_URL`. If none are set, lock APIs raise a runtime configuration error.
 
@@ -55,6 +57,7 @@ LOG_LEVEL=DEBUG          # defaults to INFO
 - `QUEUE_DRIVER` (optional): `sync` or `async_farm`. Default: `sync`.
 - `RABBITMQ_URL` (optional): RabbitMQ connection for async_farm. Default: `amqp://guest:guest@localhost:5672/`.
 - `ASYNC_FARM_JOBS_QUEUE` (optional): Job queue name. Default: `async_farm.jobs`.
+- `ASYNC_FARM_SIGNING_KEY` (optional): Enables HMAC signing for async_farm job payloads. If unset, jobs are published and consumed as raw pickled payloads.
 - `SOFT_TIMEOUT_S` (optional): Default soft timeout for queued jobs.
 - `HARD_TIMEOUT_S` (optional): Default hard timeout for queued jobs.
 
@@ -107,6 +110,9 @@ SECRET_KEY=dev-secret-key-not-for-production
 # REDIS_PORT=6379
 # QUEUE_DRIVER=sync           # or async_farm
 # RABBITMQ_URL=amqp://guest:guest@localhost:5672/
+# CACHE_SIGNING_KEY=
+# DB_CACHE_SIGNING_KEY=
+# ASYNC_FARM_SIGNING_KEY=
 # AUTH_JWT_ALGORITHM=HS256
 # ACCESS_TOKEN_LIFETIME=900
 # REFRESH_TOKEN_LIFETIME=604800

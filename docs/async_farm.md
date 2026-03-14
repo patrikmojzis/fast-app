@@ -23,6 +23,8 @@ Internally, job messages carry the dotted import path of the callable (`func_pat
 
 Workers declare exclusive control queues bound to the fanout exchange so they can receive shutdown or snapshot requests. Supervisors consume a dedicated queue for heartbeat and task events.
 
+If `ASYNC_FARM_SIGNING_KEY` is set, published job bodies are wrapped in an HMAC-signed envelope and workers verify that signature before unpickling. If it is unset, async farm uses raw pickled payloads instead.
+
 ## Running the Supervisor
 
 The CLI wrapper instantiates `AsyncFarmSupervisor`, boots the FastApp container, and enters several async loops:
@@ -118,5 +120,4 @@ TASK_HISTORY_MAX=300
 ```
 
 Values may be overridden per deployment. The CLI reads them at process start, so restart the supervisor after changing config.
-
 

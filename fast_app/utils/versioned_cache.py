@@ -89,3 +89,8 @@ async def get_value(key: str) -> Optional[bytes]:
     except SignedPayloadError:
         await redis_client.delete(key)
         return None
+
+
+async def delete_value(key: str) -> None:
+    redis_client = await _get_async_redis()
+    await redis_client.delete(key)

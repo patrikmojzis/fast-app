@@ -6,6 +6,7 @@ import pickle
 from typing import Any, Callable, Optional
 
 from fast_app.utils.versioned_cache import (
+    delete_value,
     get_collection_version,
     get_value,
     set_value,
@@ -32,7 +33,10 @@ def cached_db_retrieval(namespace: Optional[str] = None) -> Callable:
             key = _make_cache_key(func, args, kwargs, version_prefix)
             raw = await get_value(key)
             if raw is not None:
-                return pickle.loads(raw)
+                try:
+                    return pickle.loads(raw)
+                except Exception:
+                    await delete_value(key)
             result = await func(*args, **kwargs)
             await set_value(key, pickle.dumps(result), expire_in_s)
             return result

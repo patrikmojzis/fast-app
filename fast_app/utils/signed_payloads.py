@@ -16,10 +16,11 @@ class SignedPayloadError(ValueError):
 
 
 def _resolve_secret(env_var: str | None = None) -> str:
-    if env_var:
+    if env_var is not None:
         secret = os.getenv(env_var)
         if secret:
             return secret
+        raise EnvMissingException(env_var)
 
     secret = os.getenv("SECRET_KEY")
     if secret:
@@ -33,33 +34,20 @@ def _derive_hmac_key(purpose: str, secret: str) -> bytes:
     return hashlib.sha256(f"{purpose}:{secret}".encode("utf-8")).digest()
 
 
-def _sign(payload: bytes, *, purpose: str, env_var: str | None = None) -> str:
-    secret = _resolve_secret(env_var)
+def _resolve_feature_secret(env_var: str | None = None) -> str | None:
+    if env_var is None:
+        return _resolve_secret()
+
+    secret = os.getenv(env_var)
+    return secret or None
+
+
+def _sign(payload: bytes, *, purpose: str, secret: str) -> str:
     key = _derive_hmac_key(purpose, secret)
     return hmac.new(key, payload, hashlib.sha256).hexdigest()
 
 
-def dumps_signed_bytes(
-    payload: bytes,
-    *,
-    purpose: str,
-    env_var: str | None = None,
-) -> bytes:
-    envelope = {
-        "v": 1,
-        "purpose": purpose,
-        "payload_b64": base64.b64encode(payload).decode("ascii"),
-        "sig": _sign(payload, purpose=purpose, env_var=env_var),
-    }
-    return json.dumps(envelope, separators=(",", ":"), sort_keys=True).encode("utf-8")
-
-
-def loads_signed_bytes(
-    raw: bytes,
-    *,
-    purpose: str,
-    env_var: str | None = None,
-) -> bytes:
+def _decode_signed_envelope(raw: bytes, *, purpose: str) -> tuple[bytes, str]:
     try:
         envelope: dict[str, Any] = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -80,7 +68,50 @@ def loads_signed_bytes(
     except (ValueError, UnicodeEncodeError) as exc:
         raise SignedPayloadError("Signed payload body is invalid") from exc
 
-    expected = _sign(payload, purpose=purpose, env_var=env_var)
+    return payload, signature
+
+
+def _looks_like_signed_envelope(raw: bytes) -> bool:
+    return raw.lstrip().startswith(b"{")
+
+
+def dumps_signed_bytes(
+    payload: bytes,
+    *,
+    purpose: str,
+    env_var: str | None = None,
+) -> bytes:
+    secret = _resolve_feature_secret(env_var)
+    if secret is None:
+        return payload
+
+    envelope = {
+        "v": 1,
+        "purpose": purpose,
+        "payload_b64": base64.b64encode(payload).decode("ascii"),
+        "sig": _sign(payload, purpose=purpose, secret=secret),
+    }
+    return json.dumps(envelope, separators=(",", ":"), sort_keys=True).encode("utf-8")
+
+
+def loads_signed_bytes(
+    raw: bytes,
+    *,
+    purpose: str,
+    env_var: str | None = None,
+) -> bytes:
+    secret = _resolve_feature_secret(env_var)
+    if secret is None:
+        if not _looks_like_signed_envelope(raw):
+            return raw
+        try:
+            payload, _ = _decode_signed_envelope(raw, purpose=purpose)
+        except SignedPayloadError:
+            return raw
+        return payload
+
+    payload, signature = _decode_signed_envelope(raw, purpose=purpose)
+    expected = _sign(payload, purpose=purpose, secret=secret)
     if not hmac.compare_digest(signature, expected):
         raise SignedPayloadError("Signed payload verification failed")
 

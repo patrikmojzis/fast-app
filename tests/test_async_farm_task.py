@@ -180,10 +180,10 @@ async def test_task_hard_timeout_acks_when_soft_disabled() -> None:
     assert hard_called['v'] is True
 
 
-def test_task_rejects_unsigned_payload() -> None:
+def test_task_rejects_unsigned_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ASYNC_FARM_SIGNING_KEY", "async-farm-secret")
     body = _unsigned_payload_for("tests.test_async_farm_task._sync_ok", 1)
     msg = DummyMessage(body)
 
     with pytest.raises(ValueError, match="Rejected unsigned or tampered async_farm payload"):
         Task(msg)  # type: ignore[arg-type]
-

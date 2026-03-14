@@ -59,6 +59,10 @@ fast-app work --tui    # development with live dashboard
 
 The supervisor spawns worker processes, scales them based on queue depth, and monitors heartbeats. See the [Async Farm](async_farm.md) documentation for configuration details.
 
+## Payload signing
+
+Set `ASYNC_FARM_SIGNING_KEY` if you want HMAC verification on RabbitMQ job payloads. When the variable is unset, FastApp skips signing and publishes raw pickled payloads instead, which avoids the extra JSON/base64/HMAC work on isolated deployments.
+
 ## Context propagation
 
 When using `async_farm`, the current request context (from `fast_app.core.context.context`) is serialized and restored inside the worker. This means queued jobs have access to the same user, locale, or other context variables that were active when the job was enqueued.

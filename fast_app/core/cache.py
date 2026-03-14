@@ -49,7 +49,11 @@ class Cache:
         except SignedPayloadError:
             await r.delete(key)
             return default
-        return pickle.loads(verified)
+        try:
+            return pickle.loads(verified)
+        except Exception:
+            await r.delete(key)
+            return default
 
     @classmethod
     async def delete(cls, key: str):

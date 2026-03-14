@@ -37,7 +37,6 @@ class MemoryAsyncRedis:
 
 @pytest.mark.asyncio
 async def test_cached_db_retrieval_async_uses_async_redis(monkeypatch):
-    monkeypatch.setenv("SECRET_KEY", "test-secret")
     monkeypatch.setattr(versioned_cache, "_redis", BlockingSyncRedis(), raising=True)
     monkeypatch.setattr(versioned_cache, "_aredis", MemoryAsyncRedis(), raising=True)
     monkeypatch.setattr(versioned_cache, "_aredis_loop", None, raising=True)
@@ -66,7 +65,7 @@ def test_cached_db_retrieval_rejects_sync_functions():
 
 @pytest.mark.asyncio
 async def test_get_value_deletes_corrupted_signed_payload(monkeypatch):
-    monkeypatch.setenv("SECRET_KEY", "test-secret")
+    monkeypatch.setenv("DB_CACHE_SIGNING_KEY", "db-cache-secret")
     redis = MemoryAsyncRedis()
     redis.store["bad"] = b"not-json"
     monkeypatch.setattr(versioned_cache, "_aredis", redis, raising=True)
