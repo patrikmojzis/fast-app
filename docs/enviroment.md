@@ -25,6 +25,7 @@ LOG_LEVEL=DEBUG          # defaults to INFO
 #### Application and logging
 - `ENV` (debug|test|prod): controls debug behaviors (console logging, verbose errors). Default: `debug` in loader logic.
 - `LOG_LEVEL` (CRITICAL|ERROR|WARNING|INFO|DEBUG|NOTSET): root logger level. Default: `INFO`.
+- `TRUST_PROXY_HEADERS` (optional): Default `false`. When `true`, `get_client_ip()` trusts `X-Forwarded-For` / `X-Real-IP`; enable this only behind a trusted reverse proxy that rewrites those headers.
 - Localization:
   - `LOCALE_DEFAULT` (default `en`)
   - `LOCALE_FALLBACK` (default `en`)
@@ -101,6 +102,7 @@ SECRET_KEY=dev-secret-key-not-for-production
 # Optional (uncomment as needed)
 # DB_NAME=fast-app
 # LOG_LEVEL=DEBUG
+# TRUST_PROXY_HEADERS=false  # set true only behind a trusted proxy
 # REDIS_HOST=localhost
 # REDIS_PORT=6379
 # QUEUE_DRIVER=sync           # or async_farm

@@ -115,7 +115,7 @@ Unset fields are excluded, so only provided filters apply.
 
 ### `get_client_ip()`
 
-Extract the client's IP address from `X-Forwarded-For`, `X-Real-IP`, or fallback to `request.remote_addr`. Useful for logging, rate limiting, or geolocation.
+Extract the client's IP address. By default this returns `request.remote_addr`. If you are running behind a trusted reverse proxy, set `TRUST_PROXY_HEADERS=true` to allow `get_client_ip()` to trust `X-Forwarded-For` / `X-Real-IP` instead. Useful for logging, rate limiting, or geolocation.
 
 ```python
 from fast_app.core.api import get_client_ip
@@ -124,6 +124,10 @@ async def track():
     ip = get_client_ip()
     await log_access(ip)
 ```
+
+Direct deployments can leave `TRUST_PROXY_HEADERS` unset and rely on the socket remote address.
+
+Proxy deployments should enable `TRUST_PROXY_HEADERS=true` only when the proxy overwrites forwarding headers for every request.
 
 ### `get_bearer_token()`
 
