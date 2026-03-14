@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from inspect import signature, Parameter
-from typing import Any, Awaitable, Callable, Optional, Type, TYPE_CHECKING
+from functools import lru_cache
+from inspect import signature
+from typing import Any, Awaitable, Callable, NamedTuple, Optional, Type, TYPE_CHECKING
 
 from bson import ObjectId
 
@@ -11,6 +12,27 @@ from fast_app.utils.model_resolver import resolve_model_annotation
 
 if TYPE_CHECKING:
     from fast_app.contracts.model import Model as ModelBase
+
+
+class _BindingTarget(NamedTuple):
+    param_name: str
+    model_class: Type['ModelBase']
+    id_key: str
+    accepts_id_key: bool
+
+
+@lru_cache(maxsize=None)
+def _get_binding_plan(
+    next_handler: Callable[..., Awaitable[Any]],
+) -> tuple[_BindingTarget, ...]:
+    params = signature(next_handler).parameters
+    accepted_param_names = frozenset(params)
+    bindings = tuple(
+        _BindingTarget(param_name, model_class, f"{param_name}_id", f"{param_name}_id" in accepted_param_names)
+        for param_name, param in params.items()
+        if (model_class := resolve_model_annotation(param.annotation)) is not None
+    )
+    return bindings
 
 
 class ModelBindingMiddleware(Middleware):
@@ -34,23 +56,15 @@ class ModelBindingMiddleware(Middleware):
         if not kwargs:
             return await next_handler(*args, **kwargs)
 
-        sig = signature(next_handler)
-
-        # Build a map of handler parameters for quick lookup
-        params: dict[str, Parameter] = sig.parameters
+        bindings = _get_binding_plan(next_handler)
+        if not bindings:
+            return await next_handler(*args, **kwargs)
 
         # Collect binding work to perform before invoking the handler
         updated_kwargs = dict(kwargs)
 
-        for param_name, param in params.items():
-            annotation = param.annotation
-            model_class: Optional[Type['ModelBase']] = resolve_model_annotation(annotation)  # type: ignore[assignment]
-
-            if model_class is None:
-                continue
-
+        for param_name, model_class, id_key, accepts_id_key in bindings:
             # Determine id source: prefer '<param>_id', else '<param>' if str
-            id_key = f"{param_name}_id"
             id_value: Optional[str] = None
             if id_key in updated_kwargs and isinstance(updated_kwargs[id_key], (str, bytes)):
                 id_value = updated_kwargs[id_key].decode() if isinstance(updated_kwargs[id_key], bytes) else updated_kwargs[id_key]
@@ -77,13 +91,7 @@ class ModelBindingMiddleware(Middleware):
             updated_kwargs[param_name] = instance
 
             # Drop the id kwarg if the handler does not accept it
-            if id_key in updated_kwargs and id_key not in params:
+            if id_key in updated_kwargs and not accepts_id_key:
                 updated_kwargs.pop(id_key, None)
-
-            # If a same-named scalar id was used, and the handler expects the model instead,
-            # keep only the bound model instance
-            if param_name in kwargs and param_name not in params:
-                # Defensive: shouldn't happen as param_name comes from params
-                updated_kwargs.pop(param_name, None)
 
         return await next_handler(*args, **updated_kwargs)
