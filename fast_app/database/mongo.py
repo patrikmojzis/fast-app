@@ -1,7 +1,9 @@
 import logging
 import os
 from typing import Optional
+
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+
 from fast_app.exceptions import EnvMissingException
 from fast_app.utils.mongo_utils import (
     DatabaseCacheFlusher,
@@ -50,7 +52,11 @@ async def get_db():
 
 async def clear():
     global mongo, db
+    current_mongo = mongo
     await stop_change_stream_watcher()
-    mongo = None
-    db = None
-
+    try:
+        if current_mongo is not None:
+            current_mongo.close()
+    finally:
+        mongo = None
+        db = None
