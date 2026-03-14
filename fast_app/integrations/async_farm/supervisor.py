@@ -75,6 +75,11 @@ class AsyncFarmSupervisor:
         # Latest task snapshots per worker (from on-demand requests)
         self.tasks_snapshots: Dict[str, List[Dict[str, object]]] = {}
 
+    def _forget_worker(self, worker_id: str) -> Optional[WorkerState]:
+        self.tasks_snapshots.pop(worker_id, None)
+        self.muted_heartbeats = [item for item in self.muted_heartbeats if item != worker_id]
+        return self.workers.pop(worker_id, None)
+
 
     # ---------------- lifecycle ----------------
     async def run(self) -> None:
@@ -274,14 +279,14 @@ class AsyncFarmSupervisor:
         for wid, st in list(self.workers.items()):
             proc = st.get("process")
             if proc is None or not proc.is_alive():
-                self.workers.pop(wid, None)
+                self._forget_worker(wid)
             else:
                 alive_associated.append(proc)
 
         return [*self.pending_processes, *alive_associated]
 
     async def terminate_worker(self, worker_id: str) -> None:
-        state = self.workers.pop(worker_id, None)
+        state = self._forget_worker(worker_id)
         if not state:
             return
         proc = state.get("process")
@@ -409,4 +414,3 @@ class AsyncFarmSupervisor:
                     print(arg)
 
             print("")
-
