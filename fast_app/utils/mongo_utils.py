@@ -5,7 +5,7 @@ from typing import Optional
 from pymongo import monitoring
 from pymongo.errors import OperationFailure
 
-from fast_app.utils.versioned_cache import bump_collection_version
+from fast_app.utils.versioned_cache import bump_collection_version, bump_collection_version_async
 
 
 class DatabaseCacheFlusher(monitoring.CommandListener):
@@ -75,7 +75,7 @@ async def maybe_start_change_stream_watcher(db) -> None:
                                 namespace = change.get("ns") or {}
                                 collection = namespace.get("coll")
                                 if collection:
-                                    bump_collection_version(collection)
+                                    await bump_collection_version_async(collection)
                             except Exception:
                                 pass
             except asyncio.CancelledError:
@@ -101,5 +101,4 @@ async def stop_change_stream_watcher() -> None:
             pass
         finally:
             _watch_task = None
-
 

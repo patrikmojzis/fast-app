@@ -5,7 +5,11 @@ import os
 import pickle
 from typing import Any, Callable, Optional
 
-from fast_app.utils.versioned_cache import get_collection_version, get_value, set_value
+from fast_app.utils.versioned_cache import (
+    get_collection_version,
+    get_value,
+    set_value,
+)
 
 
 def cached_db_retrieval(namespace: Optional[str] = None) -> Callable:
@@ -17,37 +21,23 @@ def cached_db_retrieval(namespace: Optional[str] = None) -> Callable:
     :return: Decorated function that checks the cache before executing.
     """
     expire_in_s = int(os.getenv('DB_CACHE_EXPIRE_IN_S', '3'))
-    def decorator(func: Callable) -> Callable:  
+    def decorator(func: Callable) -> Callable:
+        if not inspect.iscoroutinefunction(func):
+            raise TypeError("cached_db_retrieval can only decorate async functions")
+
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs) -> Any:
             ns = namespace or _infer_namespace(func, args, kwargs)
-            version_prefix = _version_prefix(ns)
+            version_prefix = await _version_prefix(ns)
             key = _make_cache_key(func, args, kwargs, version_prefix)
-            raw = get_value(key)
+            raw = await get_value(key)
             if raw is not None:
                 return pickle.loads(raw)
             result = await func(*args, **kwargs)
-            set_value(key, pickle.dumps(result), expire_in_s)
+            await set_value(key, pickle.dumps(result), expire_in_s)
             return result
 
-        @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs) -> Any:
-            ns = namespace or _infer_namespace(func, args, kwargs)
-            version_prefix = _version_prefix(ns)
-            key = _make_cache_key(func, args, kwargs, version_prefix)
-            raw = get_value(key)
-            if raw is not None:
-                return pickle.loads(raw)
-            result = func(*args, **kwargs)
-            set_value(key, pickle.dumps(result), expire_in_s)
-            return result
-
-        # Choose the async or sync wrapper based on whether the original function 
-        # is a coroutine function.
-        if inspect.iscoroutinefunction(func):
-            return async_wrapper
-        else:
-            return sync_wrapper
+        return async_wrapper
 
     return decorator
 
@@ -66,11 +56,11 @@ def _make_cache_key(func: Callable, args: tuple, kwargs: dict, version_prefix: s
     return f"cache:{version_prefix}:{hash_digest}"
 
 
-def _version_prefix(namespace: Optional[str]) -> str:
+async def _version_prefix(namespace: Optional[str]) -> str:
     if not namespace:
         return "v0"
     try:
-        version = get_collection_version(namespace)
+        version = await get_collection_version(namespace)
     except Exception:
         version = 0
     return f"v{version}"

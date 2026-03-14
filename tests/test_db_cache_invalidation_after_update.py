@@ -65,3 +65,24 @@ async def test_two_rapid_sequential_updates_are_observed():
     assert final and final.name == "v3"
 
 
+@pytest.mark.asyncio
+async def test_delete_many_invalidates_cached_reads_within_cache_window():
+    os.environ["MONGO_URI"] = "mongodb://localhost:27017"
+    os.environ["TEST_ENV"] = "1"
+    os.environ["TEST_DB_NAME"] = "fast_app_cache_invalidation_test"
+    os.environ["DB_CACHE_EXPIRE_IN_S"] = "3"
+
+    await clear()
+    db = await get_db()
+    await db.drop_collection(CachedItem.collection_name())
+
+    item = await CachedItem.create({"name": "v1"})
+
+    found = await CachedItem.find_by_id(item._id)
+    assert found is not None and found.name == "v1"
+
+    await CachedItem.delete_many({"_id": item._id})
+
+    missing = await CachedItem.find_by_id(item._id)
+    assert missing is None, "Expected cache to be invalidated by version bump after delete_many"
+
