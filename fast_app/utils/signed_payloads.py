@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import os
+from functools import lru_cache
 from typing import Any
 
 from fast_app.exceptions.common_exceptions import EnvMissingException
@@ -27,9 +28,14 @@ def _resolve_secret(env_var: str | None = None) -> str:
     raise EnvMissingException("SECRET_KEY")
 
 
+@lru_cache(maxsize=128)
+def _derive_hmac_key(purpose: str, secret: str) -> bytes:
+    return hashlib.sha256(f"{purpose}:{secret}".encode("utf-8")).digest()
+
+
 def _sign(payload: bytes, *, purpose: str, env_var: str | None = None) -> str:
     secret = _resolve_secret(env_var)
-    key = hashlib.sha256(f"{purpose}:{secret}".encode("utf-8")).digest()
+    key = _derive_hmac_key(purpose, secret)
     return hmac.new(key, payload, hashlib.sha256).hexdigest()
 
 
@@ -79,4 +85,3 @@ def loads_signed_bytes(
         raise SignedPayloadError("Signed payload verification failed")
 
     return payload
-
