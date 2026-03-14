@@ -1,13 +1,30 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from inspect import signature
 from typing import Any, Awaitable, Callable, Optional, Type
 
 from pydantic import BaseModel
-from quart import g
 
 from fast_app.contracts.middleware import Middleware
 from fast_app.core.api import validate_query, validate_request
+
+
+@lru_cache(maxsize=None)
+def _resolve_schema_handler(
+    next_handler: Callable[..., Awaitable[Any]],
+) -> tuple[Optional[str], Optional[Type[BaseModel]]]:
+    sig = signature(next_handler)
+
+    for name, param in sig.parameters.items():
+        ann = param.annotation
+        try:
+            if isinstance(ann, type) and issubclass(ann, BaseModel):
+                return name, ann  # type: ignore[return-value]
+        except Exception:
+            continue
+
+    return None, None
 
 
 class SchemaValidationMiddleware(Middleware):
@@ -28,20 +45,7 @@ class SchemaValidationMiddleware(Middleware):
     """
 
     async def handle(self, next_handler: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:  # noqa: D401
-        sig = signature(next_handler)
-
-        # Find first parameter typed as a Pydantic BaseModel (or subclass)
-        schema_param_name: Optional[str] = None
-        schema_type: Optional[Type[BaseModel]] = None
-        for name, param in sig.parameters.items():
-            ann = param.annotation
-            try:
-                if isinstance(ann, type) and issubclass(ann, BaseModel):
-                    schema_param_name = name
-                    schema_type = ann  # type: ignore[assignment]
-                    break
-            except Exception:
-                continue
+        schema_param_name, schema_type = _resolve_schema_handler(next_handler)
 
         if schema_param_name is None or schema_type is None:
             return await next_handler(*args, **kwargs)
@@ -62,5 +66,4 @@ class SchemaValidationMiddleware(Middleware):
         # Do not remove any existing kwargs; keep composability
 
         return await next_handler(*args, **new_kwargs)
-
 
