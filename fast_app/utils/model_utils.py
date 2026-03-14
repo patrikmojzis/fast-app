@@ -1,5 +1,9 @@
 import re
 
+MAX_SEARCH_TOKENS = 8
+MIN_TEXT_SEARCH_TOKEN_LENGTH = 2
+MATCH_NOTHING_QUERY = {"$expr": {"$eq": [1, 0]}}
+
 _DIACRITIC_MAP = {
     'a': '[aáàâãäåăąǎǟǡǻȁȃạảấầẩẫậắằẳẵặ]',
     'b': '[bḃḅḇƀɓ]',
@@ -37,28 +41,46 @@ def _create_flexible_regex(word: str) -> str:
     return ''.join(_DIACRITIC_MAP.get(c.lower(), re.escape(c)) for c in word)
 
 
-def _iter_processed_words(words: list[str]):
-    for word in words:
-        if word.isdigit():
-            yield word
+def _iter_search_tokens(query: str):
+    seen: set[str] = set()
+
+    for chunk in re.findall(r'\d+|\D+', query.lower()):
+        if chunk.isdigit():
+            words = [chunk]
         else:
-            yield from re.findall(r'\w+', word)
+            words = re.findall(r'\w+', chunk)
+
+        for word in words:
+            if not word:
+                continue
+            if not word.isdigit() and len(word) < MIN_TEXT_SEARCH_TOKEN_LENGTH:
+                continue
+            if word in seen:
+                continue
+
+            seen.add(word)
+            yield word
+
+            if len(seen) >= MAX_SEARCH_TOKENS:
+                return
 
 
 def build_search_query_from_string(query: str, search_fields: list[str] = None) -> dict:
-    # Preprocess the query string
-    # Use regex to split alphanumeric strings into words and numbers
-    words = re.findall(r'\d+|\D+', query.lower())
+    normalized_fields = [field for field in (search_fields or []) if field]
+    words = list(_iter_search_tokens(query))
 
-    # Create a list of conditions for each word
+    if not words:
+        return {}
+    if not normalized_fields:
+        return MATCH_NOTHING_QUERY
+
     word_conditions = []
-    for word in _iter_processed_words(words):
+    for word in words:
         word_condition = {"$or": [
-            {key: {"$regex": f".*{_create_flexible_regex(word)}.*", "$options": "iu"}}
-            for key in search_fields
+            {key: {"$regex": _create_flexible_regex(word), "$options": "iu"}}
+            for key in normalized_fields
         ]}
         word_conditions.append(word_condition)
 
-    # Combine all word conditions with $and
     mongo_query = {"$and": word_conditions} if word_conditions else {}
     return mongo_query

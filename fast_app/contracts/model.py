@@ -1,7 +1,8 @@
 # app/models/model.py
 from copy import deepcopy
 from datetime import datetime
-from typing import Optional, TypeVar, ClassVar, Any, get_type_hints, get_origin, Self, Dict
+from types import UnionType
+from typing import Annotated, Optional, TypeVar, ClassVar, Any, get_type_hints, get_origin, get_args, Self, Dict, Union
 from typing import TYPE_CHECKING
 
 from bson import ObjectId
@@ -35,6 +36,7 @@ class Model:
     _cached_model_fields: ClassVar[Optional[Dict[str, Any]]] = None
     _cached_fillable_fields: ClassVar[Optional[list[str]]] = None
     _cached_all_fields: ClassVar[Optional[list[str]]] = None
+    _cached_text_searchable_fields: ClassVar[Optional[list[str]]] = None
     factory: ClassVar[Optional[Factory[T]]] = None
 
     search_relations: ClassVar[Optional[list[Dict[str, str]]]] = None  # Example: [{"field": "user_id", "model": "User", "search_fields": ["name"]}]
@@ -135,10 +137,42 @@ class Model:
         return cls._cached_all_fields
 
     @classmethod
-    def searchable_fields(cls) -> list[str]:
+    def searchable_fields(cls, mode: str = "text") -> list[str]:
         if cls.search_fields:
             return cls.search_fields
+        if mode == "text":
+            return cls._default_text_searchable_fields()
         return cls.all_fields()
+
+    @staticmethod
+    def _is_text_searchable_hint(hint: Any) -> bool:
+        if hint is str:
+            return True
+
+        origin = get_origin(hint)
+        if origin is Annotated:
+            annotated_args = get_args(hint)
+            return bool(annotated_args) and Model._is_text_searchable_hint(annotated_args[0])
+        if origin in (Union, UnionType):
+            return any(
+                Model._is_text_searchable_hint(arg)
+                for arg in get_args(hint)
+                if arg is not type(None)
+            )
+
+        return False
+
+    @classmethod
+    def _default_text_searchable_fields(cls) -> list[str]:
+        if cls._cached_text_searchable_fields is not None:
+            return cls._cached_text_searchable_fields
+
+        cls._cached_text_searchable_fields = [
+            field_name
+            for field_name, hint in cls.model_fields().items()
+            if cls._is_text_searchable_hint(hint)
+        ]
+        return cls._cached_text_searchable_fields
 
     async def _notify_observer(self, hook: str) -> None:
         for observer in self.observers:
@@ -236,12 +270,15 @@ class Model:
         """
         Search for records in the current collection and related collections.
         """
-        # Convert query to string if it's an int or ObjectId
-        search_fields = cls.searchable_fields()
-
         if isinstance(query, int):
             query = str(query)
-        elif isinstance(query, ObjectId):
+
+        if isinstance(query, str):
+            search_fields = cls.searchable_fields()
+        else:
+            search_fields = cls.searchable_fields(mode="all")
+
+        if isinstance(query, ObjectId):
             query = {"$or": [{key: query} for key in search_fields]}
             
         current_collection = cls.collection_name()
