@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from typing import Any, Optional, Sequence, TYPE_CHECKING
 
 from bson import ObjectId
@@ -91,14 +93,23 @@ class ExistsValidatorRule(ValidatorRule):
 
         items = value if (self.each and isinstance(value, list)) else [value]
 
+        normalized_items: list[Any] = []
         for item in items:
             if self.is_object_id:
                 if not isinstance(item, ObjectId):
                     if not isinstance(item, str) or not ObjectId.is_valid(item):
                         raise ValidationRuleException(f"[Exists] Invalid ObjectId at `{display}`.", loc=tuple(loc))
                     item = ObjectId(item)
-            query_value = item
-            exists = await model_class.exists({self.db_key: query_value})
+            normalized_items.append(item)
+
+        if len(normalized_items) == 1:
+            exists_results = [await model_class.exists({self.db_key: normalized_items[0]})]
+        else:
+            exists_results = await asyncio.gather(
+                *(model_class.exists({self.db_key: item}) for item in normalized_items)
+            )
+
+        for exists in exists_results:
             if not exists:
                 raise ValidationRuleException(
                     f"[Exists] {model_class.__name__} (`{display}`) not found.",
