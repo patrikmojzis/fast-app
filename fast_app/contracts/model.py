@@ -27,7 +27,7 @@ TRelated = TypeVar('TRelated', bound='Model')
 
 
 class Model:
-    protected: ClassVar[list[str]] = ["_id", "created_at", "updated_at"]
+    protected: ClassVar[frozenset[str]] = frozenset({"_id", "created_at", "updated_at"})
 
     policy: ClassVar[Optional['Policy']] = None
     _cached_model_fields: ClassVar[Optional[Dict[str, Any]]] = None
