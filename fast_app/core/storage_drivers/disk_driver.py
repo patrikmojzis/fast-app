@@ -1,3 +1,4 @@
+import asyncio
 import os
 import shutil
 from datetime import datetime
@@ -34,9 +35,13 @@ class DiskDriver(StorageDriver):
 
     async def get(self, path: str) -> bytes:
         file_path = self._full(self._secure(path))
-        if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {path}")
-        return file_path.read_bytes()
+
+        def _read_bytes() -> bytes:
+            if not file_path.exists():
+                raise FileNotFoundError(f"File not found: {path}")
+            return file_path.read_bytes()
+
+        return await asyncio.to_thread(_read_bytes)
 
     async def put(self, path: str, content: Union[str, bytes, IO], **kwargs) -> str:
         secure = self._secure(path)
@@ -161,4 +166,3 @@ class DiskDriver(StorageDriver):
             for k, v in extra_headers.items():
                 resp.headers[k] = v
         return resp
-
