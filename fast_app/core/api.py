@@ -1,7 +1,8 @@
 import asyncio
 import os
 from collections.abc import Mapping
-from typing import Any, Optional, Literal, TypeVar
+from functools import lru_cache
+from typing import Any, Optional, Literal, TypeVar, NamedTuple
 from typing import TYPE_CHECKING
 
 from fast_validation import ValidationRuleException, Schema
@@ -217,6 +218,36 @@ async def validate_request(schema: type[S], *, partial: bool = False) -> S:
     g.validated = validated
     return instance
 
+class QueryFieldSpec(NamedTuple):
+    name: str
+    collects_list_values: bool
+
+
+@lru_cache(maxsize=None)
+def _get_query_field_specs(schema: type[BaseModel]) -> tuple[QueryFieldSpec, ...]:
+    # Schema field layouts are stable per class, so cache their list/scalar shape.
+    return tuple(
+        QueryFieldSpec(
+            name=field_name,
+            collects_list_values=is_list_type(field.annotation),
+        )
+        for field_name, field in schema.model_fields.items()
+    )
+
+
+def _get_scalar_query_value(args, field_name: str) -> tuple[bool, Any]:
+    if field_name in args:
+        return True, args.get(field_name)
+
+    bracket_name = f"{field_name}[]"
+    if bracket_name in args:
+        list_values = args.getlist(bracket_name)
+        if list_values:
+            return True, list_values[0]
+
+    return False, None
+
+
 def get_query(schema: type[BaseModel]) -> dict:
     """Extract query params tailored to a Pydantic schema without validating.
 
@@ -225,21 +256,18 @@ def get_query(schema: type[BaseModel]) -> dict:
     - For scalar fields, take the first value if present.
     - Leave type coercion to Pydantic in the subsequent validation step.
     """
+    args = request.args
     query_data: dict = {}
-    for field_name, field in schema.model_fields.items():
-        annotation = field.annotation
-        if is_list_type(annotation):
-            values = collect_list_values(field_name)
+    for field_spec in _get_query_field_specs(schema):
+        if field_spec.collects_list_values:
+            values = collect_list_values(field_spec.name)
             if values:
-                query_data[field_name] = values
-        else:
-            if field_name in request.args:
-                query_data[field_name] = request.args.get(field_name)
-            elif f"{field_name}[]" in request.args:
-                # If client sent array syntax for a scalar field, keep the first one
-                list_values = request.args.getlist(f"{field_name}[]")
-                if list_values:
-                    query_data[field_name] = list_values[0]
+                query_data[field_spec.name] = values
+            continue
+
+        has_value, value = _get_scalar_query_value(args, field_spec.name)
+        if has_value:
+            query_data[field_spec.name] = value
     return query_data
 
 async def validate_query(schema: type[S], *, partial: bool = False) -> S:
