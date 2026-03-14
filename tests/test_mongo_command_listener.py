@@ -19,13 +19,11 @@ async def test_command_listener_bumps_version_on_insert():
     # Ensure clean collection
     await db.drop_collection(collection)
 
-    before = get_collection_version(collection)
+    before = await get_collection_version(collection)
 
     # Perform a raw insert using Motor to trigger CommandListener
     await db[collection].insert_one({"a": 1})
 
-    after = get_collection_version(collection)
+    after = await get_collection_version(collection)
 
     assert after == before + 1
-
-

@@ -16,7 +16,7 @@ from fast_app.utils.datetime_utils import now
 from fast_app.utils.model_utils import build_search_query_from_string
 from fast_app.utils.query_builder import QueryBuilder
 from fast_app.utils.serialisation import pascal_case_to_snake_case, serialise
-from fast_app.utils.versioned_cache import bump_collection_version
+from fast_app.utils.versioned_cache import bump_collection_version_async
 
 if TYPE_CHECKING:
     from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorCommandCursor
@@ -187,7 +187,7 @@ class Model:
         )
         await coll.update_one(query, update_payload)
         await self.refresh()
-        bump_collection_version(self.collection_name())
+        await bump_collection_version_async(self.collection_name())
         await self._notify_observer('on_updated')
 
     async def _create(self) -> None:
@@ -202,7 +202,7 @@ class Model:
         result = await coll.insert_one(data)
         self._id = result.inserted_id
         await self.refresh()
-        bump_collection_version(self.collection_name())
+        await bump_collection_version_async(self.collection_name())
         await self._notify_observer('on_created')
 
     @classmethod
@@ -414,14 +414,14 @@ class Model:
         coll = await cls.collection_cls()
         final_query = await cls.query_modifier(query, "delete_many", cls.collection_name())
         await coll.delete_many(final_query, **kwargs)
-        bump_collection_version(cls.collection_name())
+        await bump_collection_version_async(cls.collection_name())
 
     async def delete(self) -> None:
         await self._notify_observer('on_deleting')
         coll = await self.collection()
         query = await self.query_modifier({'_id': self._id}, "delete", self.collection_name())
         await coll.delete_one(query)
-        bump_collection_version(self.collection_name())
+        await bump_collection_version_async(self.collection_name())
         await self._notify_observer('on_deleted')
 
     @classmethod
@@ -430,7 +430,7 @@ class Model:
         final_query = await cls.query_modifier(query, "update_many", cls.collection_name())
         update_data = cls._build_update_payload(set_values=data.get("$set"), extra_ops={k: v for k, v in data.items() if k != "$set"}, touch_timestamp=True)
         await coll.update_many(final_query, update_data, **kwargs)
-        bump_collection_version(cls.collection_name())
+        await bump_collection_version_async(cls.collection_name())
 
     async def update(self, data: dict[str, Any]) -> Self:
         for key, value in data.items():
@@ -443,7 +443,7 @@ class Model:
         query = await self.query_modifier({'_id': self._id}, "touch", self.collection_name())
         await coll.update_one(query, {"$currentDate": {"updated_at": True}})
         await self.refresh()
-        bump_collection_version(self.collection_name())
+        await bump_collection_version_async(self.collection_name())
         return self
 
     @classmethod
@@ -463,7 +463,7 @@ class Model:
             d.update(base_meta)
 
         await (await cls.collection_cls()).insert_many(data)
-        bump_collection_version(cls.collection_name())
+        await bump_collection_version_async(cls.collection_name())
 
     @classmethod
     async def update_or_create(cls: type[T], query: dict[str, Any], data: dict[str, Any]) -> T:
