@@ -122,7 +122,12 @@ class AsyncFarmWorker:
             await message.nack(requeue=True)
             return
 
-        task = Task(message)
+        try:
+            task = Task(message)
+        except ValueError as exc:
+            logging.error(f"[WORKER] Rejected invalid job payload: {exc}")
+            await message.ack()
+            return
 
         self.tasks.add(task)
         async def _on_done(_: Task) -> None:
@@ -358,4 +363,3 @@ def _run() -> None:
 
 if __name__ == "__main__":
     _run()
-

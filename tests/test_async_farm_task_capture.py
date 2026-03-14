@@ -4,6 +4,7 @@ import pickle
 from typing import Any, Dict
 
 import pytest
+from fast_app.utils.signed_payloads import dumps_signed_bytes
 @pytest.fixture(autouse=True)
 def _configure_logging() -> None:
     root = logging.getLogger()
@@ -55,7 +56,11 @@ def _payload_for(func_path: str, *, args: tuple[Any, ...] = (), kwargs: Dict[str
         payload["args_pickled"] = pickle.dumps(args)
     if kwargs:
         payload["kwargs_pickled"] = pickle.dumps(kwargs)
-    return pickle.dumps(payload)
+    return dumps_signed_bytes(
+        pickle.dumps(payload),
+        purpose="async_farm",
+        env_var="ASYNC_FARM_SIGNING_KEY",
+    )
 
 
 @pytest.mark.asyncio
@@ -139,5 +144,4 @@ async def test_concurrent_tasks_isolated_capture() -> None:
     assert "async-log-info-Y" in cap2 and "async-log-error-Y" in cap2
 
     assert msg1._acked is True and msg2._acked is True
-
 

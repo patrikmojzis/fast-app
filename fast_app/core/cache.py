@@ -5,6 +5,8 @@ from typing import Any, Awaitable, Callable, Optional, Union
 
 import redis.asyncio as redis
 
+from fast_app.utils.signed_payloads import SignedPayloadError, dumps_signed_bytes, loads_signed_bytes
+
 
 r = redis.Redis.from_url(os.getenv("REDIS_CACHE_URL", "redis://localhost:6379/15"))
 
@@ -17,7 +19,11 @@ class Cache:
         :param value: The value to store.
         :param expire_in_m: Expiration time in minutes (optional).
         """
-        serialized_value = pickle.dumps(value)
+        serialized_value = dumps_signed_bytes(
+            pickle.dumps(value),
+            purpose="cache",
+            env_var="CACHE_SIGNING_KEY",
+        )
         if expire_in_m is not None:
             await r.setex(key, int(round(expire_in_m * 60)), serialized_value)
         else:
@@ -34,7 +40,16 @@ class Cache:
         value = await r.get(key)
         if value is None:
             return default
-        return pickle.loads(value)
+        try:
+            verified = loads_signed_bytes(
+                value,
+                purpose="cache",
+                env_var="CACHE_SIGNING_KEY",
+            )
+        except SignedPayloadError:
+            await r.delete(key)
+            return default
+        return pickle.loads(verified)
 
     @classmethod
     async def delete(cls, key: str):

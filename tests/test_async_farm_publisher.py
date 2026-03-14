@@ -5,7 +5,9 @@ from typing import Any
 
 import pytest
 
+from fast_app.integrations.async_farm import publisher
 from fast_app.integrations.async_farm.publisher import enqueue_callable
+from fast_app.utils.signed_payloads import loads_signed_bytes
 
 
 def sample(x: int) -> int:
@@ -42,5 +44,30 @@ class DummyConnection:
     async def close(self) -> None:
         return None
 
+
+@pytest.mark.asyncio
+async def test_enqueue_callable_signs_job_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    exchange = DummyExchange()
+
+    async def fake_connect_robust(*args: Any, **kwargs: Any) -> DummyConnection:
+        return DummyConnection(exchange)
+
+    monkeypatch.setattr(publisher.aio_pika, "connect_robust", fake_connect_robust)
+
+    await enqueue_callable(sample, 41)
+
+    assert len(exchange.published) == 1
+    message, routing_key = exchange.published[0]
+    assert routing_key == "async_farm.jobs"
+
+    raw_payload = loads_signed_bytes(
+        message.body,
+        purpose="async_farm",
+        env_var="ASYNC_FARM_SIGNING_KEY",
+    )
+    payload = pickle.loads(raw_payload)
+
+    assert payload["func_path"] == "tests.test_async_farm_publisher.sample"
+    assert pickle.loads(payload["args_pickled"]) == (41,)
 
 

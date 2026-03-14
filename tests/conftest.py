@@ -3,6 +3,11 @@
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _secret_key_env(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+
+
 @pytest.fixture
 def sample_data():
     """Provide sample data for tests."""

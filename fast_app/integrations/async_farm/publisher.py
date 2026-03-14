@@ -12,6 +12,7 @@ from aio_pika import Message
 from fast_app.application import Application
 from fast_app.core.context import context
 from fast_app.utils.queue_utils import to_dotted_path
+from fast_app.utils.signed_payloads import dumps_signed_bytes
 
 
 RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
@@ -25,7 +26,11 @@ async def _publish_pickled(payload: dict[str, Any], ttl_ms: int, headers: dict[s
         channel = await connection.channel()
         queue_name = os.getenv("ASYNC_FARM_JOBS_QUEUE", "async_farm.jobs")
         await channel.declare_queue(queue_name, durable=True)
-        body = pickle.dumps(payload, protocol=pickle.HIGHEST_PROTOCOL)
+        body = dumps_signed_bytes(
+            pickle.dumps(payload, protocol=pickle.HIGHEST_PROTOCOL),
+            purpose="async_farm",
+            env_var="ASYNC_FARM_SIGNING_KEY",
+        )
         expiration = ttl_ms if ttl_ms > 0 else None
         props = {"headers": headers or {}}
         if expiration is not None:
@@ -99,6 +104,5 @@ async def enqueue_callable(func: Callable[..., Any], *args: Any, **kwargs: Any) 
             headers["hard_timeout_s"] = int(hard_timeout)
 
     await _publish_pickled(payload, ttl_ms, headers=headers)
-
 
 

@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 from fast_app.integrations.async_farm.task import Task
+from fast_app.utils.signed_payloads import dumps_signed_bytes
 
 
 # Top-level functions so they are importable via dotted path from tests.test_async_farm_task
@@ -41,6 +42,22 @@ class DummyMessage:
 
 
 def _payload_for(func_path: str, *args: Any, **kwargs: Any) -> bytes:
+    payload = {
+        "func_path": func_path,
+        "args_pickled": pickle.dumps(args),
+        "kwargs_pickled": pickle.dumps(kwargs),
+        "args_compressed": False,
+        "kwargs_compressed": False,
+        "ctx_snapshot": None,
+    }
+    return dumps_signed_bytes(
+        pickle.dumps(payload),
+        purpose="async_farm",
+        env_var="ASYNC_FARM_SIGNING_KEY",
+    )
+
+
+def _unsigned_payload_for(func_path: str, *args: Any, **kwargs: Any) -> bytes:
     payload = {
         "func_path": func_path,
         "args_pickled": pickle.dumps(args),
@@ -162,4 +179,11 @@ async def test_task_hard_timeout_acks_when_soft_disabled() -> None:
     assert msg._acked is True
     assert hard_called['v'] is True
 
+
+def test_task_rejects_unsigned_payload() -> None:
+    body = _unsigned_payload_for("tests.test_async_farm_task._sync_ok", 1)
+    msg = DummyMessage(body)
+
+    with pytest.raises(ValueError, match="Rejected unsigned or tampered async_farm payload"):
+        Task(msg)  # type: ignore[arg-type]
 

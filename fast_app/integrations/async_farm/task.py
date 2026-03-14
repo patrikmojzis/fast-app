@@ -22,6 +22,7 @@ from fast_app.core.context import context
 from fast_app.utils.serialisation import safe_int
 from fast_app.utils.logging import setup_logging
 from fast_app.utils.async_farm_utils import decode_message, AckGuard
+from fast_app.utils.signed_payloads import SignedPayloadError, loads_signed_bytes
 import zlib
 
 
@@ -108,7 +109,7 @@ class Task:
     ):
         self.ack_guard = AckGuard(message)
         self.message = message
-        self.payload = pickle.loads(message.body)
+        self.payload = self._load_signed_payload(message)
         self.task_id: str = str(getattr(message, "delivery_tag", f"{os.getpid()}-{int(time.time()*1000)}"))
         self.func_path = self.payload.get("func_path")
         self.func: Optional[Callable[..., Any]] = self._parse_func_path()
@@ -140,6 +141,18 @@ class Task:
         self.started_at: Optional[float] = None
         self.ended_at: Optional[float] = None
         self.status: str = "pending"  # pending | running | success | failure | soft_timeout | hard_timeout
+
+    @staticmethod
+    def _load_signed_payload(message: aio_pika.IncomingMessage) -> dict[str, Any]:
+        try:
+            raw_payload = loads_signed_bytes(
+                message.body,
+                purpose="async_farm",
+                env_var="ASYNC_FARM_SIGNING_KEY",
+            )
+        except SignedPayloadError as exc:
+            raise ValueError("Rejected unsigned or tampered async_farm payload") from exc
+        return pickle.loads(raw_payload)
 
     # ---------------------- capture helpers ----------------------
     def _append_capture(self, kind: str, text: str, meta: Optional[Dict[str, Any]]) -> None:
