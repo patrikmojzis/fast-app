@@ -1,4 +1,6 @@
 import os
+import secrets
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional, TypedDict, Literal
 
@@ -22,6 +24,7 @@ ALGORITHM = os.getenv("AUTH_JWT_ALGORITHM", "HS256")
 
 class RefreshToken(TypedDict):
     sub: str | ObjectId  # User ID
+    jti: str
     metadata: Optional[Dict[str, Any]]
     token_type: Literal[REFRESH_TOKEN_TYPE]
     iat: int
@@ -38,6 +41,10 @@ class AccessToken(TypedDict):
 def _validate_env():
     if not os.getenv("SECRET_KEY"):
         raise EnvMissingException("SECRET_KEY")
+
+
+def hash_token_value(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 def create_access_token(sub: str | ObjectId, sid: str | ObjectId, metadata: Dict[str, Any] = None) -> str:
     """
@@ -65,7 +72,12 @@ def create_access_token(sub: str | ObjectId, sid: str | ObjectId, metadata: Dict
     return jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm=ALGORITHM)
 
 
-def create_refresh_token(sub: str | ObjectId, metadata: Dict[str, Any] = None) -> str:
+def create_refresh_token(
+    sub: str | ObjectId,
+    metadata: Dict[str, Any] = None,
+    *,
+    token_id: Optional[str] = None,
+) -> str:
     """
     Create a JWT refresh token for a user.
     
@@ -81,6 +93,7 @@ def create_refresh_token(sub: str | ObjectId, metadata: Dict[str, Any] = None) -
     
     payload: RefreshToken = {
         "sub": str(sub),
+        "jti": token_id or secrets.token_urlsafe(32),
         "metadata": metadata,
         "token_type": REFRESH_TOKEN_TYPE,
         "iat": int(present_time.timestamp()),

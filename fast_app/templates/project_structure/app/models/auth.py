@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, ClassVar
 
 from app.observers.auth_observer import AuthObserver
 from bson import ObjectId
 
-from fast_app import Model, register_observer, create_access_token
+from fast_app import ASC, Index, Model, register_observer, create_access_token
+from fast_app.core.jwt_auth import hash_token_value
 from fast_app.utils.datetime_utils import now
 
 if TYPE_CHECKING:
@@ -14,7 +17,16 @@ if TYPE_CHECKING:
 @register_observer(AuthObserver)
 class Auth(Model):
 
-    refresh_token: str = None  # JWT refresh token
+    indexes: ClassVar[list[Index]] = [
+        Index(
+            keys=[("refresh_token_hash", ASC)],
+            name="auth_refresh_token_hash",
+            unique=True,
+            sparse=True,
+        )
+    ]
+
+    refresh_token_hash: str = None
     user_id: ObjectId = None  # Reference to user
     expires_at: datetime = None  # Token expiry time
     identifier: Optional[str] = None  # Optional device identification or login source
@@ -35,7 +47,7 @@ class Auth(Model):
     async def cleanup_expired(cls, grace_period_days: int = 30) -> None:
         """Remove expired refresh tokens from database."""
         await cls.delete_many({
-            'expires_at': {'$lt': now() + timedelta(days=grace_period_days)}
+            'expires_at': {'$lt': now() - timedelta(days=grace_period_days)}
         })
     
     @classmethod
@@ -60,3 +72,18 @@ class Auth(Model):
     def create_access_token(self) -> str:
         """Create an access token for the user."""
         return create_access_token(self.user_id, self.id)
+
+    def set_refresh_token(self, token: str) -> None:
+        self._plain_refresh_token = token
+        self.refresh_token_hash = self.hash_refresh_token(token)
+
+    @property
+    def refresh_token(self) -> str:
+        token = getattr(self, "_plain_refresh_token", None)
+        if token is None:
+            raise RuntimeError("Refresh token is only available on newly issued auth sessions.")
+        return token
+
+    @staticmethod
+    def hash_refresh_token(token: str) -> str:
+        return hash_token_value(token)

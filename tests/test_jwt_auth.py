@@ -1,7 +1,9 @@
 import os
+from datetime import datetime, timezone
 from typing import Any
 
 import pytest
+import jwt
 
 from fast_app import (
     create_access_token,
@@ -33,6 +35,7 @@ def test_refresh_token_roundtrip():
     token = create_refresh_token("user123")
     payload = decode_token(token, token_type=REFRESH_TOKEN_TYPE)
     assert payload["sub"] == "user123"
+    assert payload["jti"]
     assert payload["token_type"] == REFRESH_TOKEN_TYPE
 
 
@@ -40,6 +43,29 @@ def test_refresh_token_rejected_when_access_expected():
     token = create_refresh_token("user123")
     with pytest.raises(InvalidTokenTypeException):
         decode_token(token, token_type=ACCESS_TOKEN_TYPE)
+
+
+def test_refresh_token_is_unique_even_same_second(monkeypatch: pytest.MonkeyPatch):
+    fixed_now = datetime(2030, 1, 1, tzinfo=timezone.utc)
+    monkeypatch.setattr("fast_app.core.jwt_auth.now", lambda: fixed_now)
+
+    first = create_refresh_token("user123")
+    second = create_refresh_token("user123")
+
+    assert first != second
+    first_payload = jwt.decode(
+        first,
+        "test-secret-key",
+        algorithms=["HS256"],
+        options={"verify_exp": False, "verify_iat": False},
+    )
+    second_payload = jwt.decode(
+        second,
+        "test-secret-key",
+        algorithms=["HS256"],
+        options={"verify_exp": False, "verify_iat": False},
+    )
+    assert first_payload["jti"] != second_payload["jti"]
 
 
 def test_auth_resource_mapping_returns_correct_tokens():
@@ -76,5 +102,3 @@ async def test_auth_resource_mapping_async():
     assert data["token_type"] == "bearer"
     assert data["access_token"] == "dummy-access-token"
     assert data["refresh_token"] == "dummy-refresh-token"
-
-

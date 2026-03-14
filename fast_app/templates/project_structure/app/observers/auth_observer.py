@@ -26,6 +26,6 @@ class AuthObserver(Observer):
             if not auth.user_agent:
                 auth.user_agent = request.headers.get('User-Agent')
 
-        auth.refresh_token = create_refresh_token(auth.user_id)
+        refresh_token = create_refresh_token(auth.user_id)
+        auth.set_refresh_token(refresh_token)
         auth.expires_at = now() + timedelta(seconds=REFRESH_TOKEN_LIFETIME)        
-

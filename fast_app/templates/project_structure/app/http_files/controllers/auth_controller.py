@@ -2,6 +2,7 @@ from app.http_files.resources.auth_resource import AuthResource
 from app.http_files.schemas.auth_refresh_schema import AuthRefreshSchema
 from app.models.auth import Auth
 from app.models.user import User
+from pymongo import ReturnDocument
 from quart import g, Response
 
 from fast_app import decode_token, now
@@ -33,20 +34,45 @@ async def refresh(data: AuthRefreshSchema):
     except AuthException:
         raise UnauthorizedException()
 
-    auth = await Auth.find_one({'refresh_token': data.refresh_token, 'is_revoked': {"$ne": True}})
-    if not auth:
+    coll = await Auth.collection_cls()
+    refresh_token_hash = Auth.hash_refresh_token(data.refresh_token)
+
+    async def _consume_refresh_token(query: dict) -> dict | None:
+        final_query = await Auth.query_modifier(query, "find_one", Auth.collection_name())
+        return await coll.find_one_and_update(
+            final_query,
+            {
+                '$set': {'is_revoked': True},
+                '$currentDate': {'updated_at': True},
+            },
+            return_document=ReturnDocument.BEFORE,
+        )
+
+    token_filters = {
+        'is_revoked': {"$ne": True},
+        '$or': [
+            {'expires_at': None},
+            {'expires_at': {'$gt': now()}},
+        ],
+    }
+    raw_auth = await _consume_refresh_token({
+        'refresh_token_hash': refresh_token_hash,
+        **token_filters,
+    })
+    if raw_auth is None:
+        # One-way compatibility path for sessions issued before refresh_token_hash existed.
+        raw_auth = await _consume_refresh_token({
+            'refresh_token': data.refresh_token,
+            **token_filters,
+        })
+    if not raw_auth:
         raise UnauthorizedException()
 
-    if auth.expires_at and auth.expires_at <= now():
-        await auth.revoke()
-        raise UnauthorizedException()
-    
+    auth = Auth(**raw_auth)
     new_auth = await Auth.create({
         'user_id': auth.user_id,
         # 'identifier': request.headers.get('X-Device-Id'),  # Optional custom device ID or login source
     })
-
-    await auth.revoke()  # Revoke the old refresh token
     
     return AuthResource(new_auth)
 

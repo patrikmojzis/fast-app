@@ -1,4 +1,5 @@
 import asyncio
+import os
 from collections.abc import Mapping
 from typing import Any, Optional, Literal, TypeVar
 from typing import TYPE_CHECKING
@@ -10,6 +11,7 @@ from quart import request, has_request_context, g
 from fast_app.exceptions.common_exceptions import AppException
 from fast_app.exceptions.http_exceptions import UnprocessableEntityException
 from fast_app.utils.api_utils import is_list_type, collect_list_values
+from fast_app.utils.env_utils import env_bool
 
 if TYPE_CHECKING:
     pass
@@ -41,15 +43,14 @@ def get_client_ip() -> str:
     proxy_set_header X-Real-IP $remote_addr;
     ```
     """
-    # Try to get IP from X-Forwarded-For header first (for proxy cases)
-    if 'X-Forwarded-For' in request.headers:
+    trust_proxy_headers = env_bool("TRUST_PROXY_HEADERS", True)
+
+    if trust_proxy_headers and 'X-Forwarded-For' in request.headers:
         ip = request.headers['X-Forwarded-For'].split(',')[0]
-    # Then try X-Real-IP header
-    elif 'X-Real-IP' in request.headers:
+    elif trust_proxy_headers and 'X-Real-IP' in request.headers:
         ip = request.headers['X-Real-IP']
-    # Finally fall back to remote address
     else:
-        ip = request.remote_addr
+        ip = request.remote_addr or ""
     return ip
 
 def get_bearer_token() -> str | None:

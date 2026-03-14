@@ -1,5 +1,3 @@
-import ssl
-
 import aiohttp
 
 
@@ -10,14 +8,7 @@ async def send_via_telegram(text: str, bot_token: str, chat_id: str):
         "parse_mode": "MarkdownV2"
     }
 
-    # Create SSL context that doesn't verify certificates (for environments with SSL issues)
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-            
-    connector = aiohttp.TCPConnector(ssl=ssl_context)
-
-    async with aiohttp.ClientSession(connector=connector) as session:
+    async with aiohttp.ClientSession() as session:
         async with session.post(
             f"https://api.telegram.org/bot{bot_token}/sendMessage",
             json=payload

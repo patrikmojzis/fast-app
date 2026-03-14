@@ -272,6 +272,44 @@ class FileStorageValidator:
         self.allowed_mime_types = set(allowed_mime_types or [])
         self.reject_mime_mismatch = reject_mime_mismatch
         self.max_size_bytes = int(self.max_size_mb * 1024 * 1024)
+        self._mime_probe_bytes = 8192
+
+    def _rewind(self, file: FileStorage) -> None:
+        for target in (file, getattr(file, "stream", None)):
+            if target is None:
+                continue
+            try:
+                target.seek(0)
+                return
+            except Exception:
+                continue
+
+    def _measure_size_and_sample(self, file: FileStorage) -> Tuple[int, bytes]:
+        stream = getattr(file, "stream", file)
+        try:
+            stream.seek(0)
+            sample = stream.read(self._mime_probe_bytes)
+            stream.seek(0, os.SEEK_END)
+            size_bytes = int(stream.tell())
+            stream.seek(0)
+            return size_bytes, sample
+        except Exception:
+            pass
+
+        sample = bytearray()
+        size_bytes = 0
+        while True:
+            chunk = stream.read(min(64 * 1024, self.max_size_bytes + 1))
+            if not chunk:
+                break
+            if len(sample) < self._mime_probe_bytes:
+                remaining = self._mime_probe_bytes - len(sample)
+                sample.extend(chunk[:remaining])
+            size_bytes += len(chunk)
+            if size_bytes > self.max_size_bytes:
+                break
+        self._rewind(file)
+        return size_bytes, bytes(sample)
 
     def validate(self, file: FileStorage) -> Tuple[bool, Optional[str], dict[str, Any]]:
         """
@@ -291,24 +329,14 @@ class FileStorageValidator:
         filename = getattr(file, "filename", "") or ""
         client_mime = getattr(file, "mimetype", None)
 
-        # Read bytes ONCE to measure size + detect MIME; then rewind.
-        content: bytes = file.read()
-        size_bytes = len(content)
-        try:
-            file.seek(0)  # rewind so caller can read/save again
-        except Exception:
-            # Some storages expose file.stream
-            try:
-                file.stream.seek(0)
-            except Exception:
-                pass  # worst case, caller must handle
+        size_bytes, content_sample = self._measure_size_and_sample(file)
 
         guessed_mime, _ = mimetypes.guess_type(filename)
         magic_mime: Optional[str] = None
 
-        if magic and content:
+        if magic and content_sample:
             try:
-                magic_mime = magic.from_buffer(content, mime=True)
+                magic_mime = magic.from_buffer(content_sample, mime=True)
             except Exception:
                 magic_mime = None
 

@@ -27,7 +27,16 @@ class PublishCommand(CommandBase):
     
     def execute(self, args: argparse.Namespace) -> None:
         """Publish package to current project."""
-        package_path = TEMPLATES_PATH / "publish" / args.package
+        publish_root = (TEMPLATES_PATH / "publish").resolve()
+        package_arg = Path(args.package)
+        if package_arg.is_absolute() or any(part in {"", ".", ".."} for part in package_arg.parts) or len(package_arg.parts) != 1:
+            self._show_available_packages(args.package)
+            return
+
+        package_path = (publish_root / package_arg.name).resolve()
+        if not package_path.is_relative_to(publish_root):
+            self._show_available_packages(args.package)
+            return
         
         if not package_path.exists():
             self._show_available_packages(args.package)
