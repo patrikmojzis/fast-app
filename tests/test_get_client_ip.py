@@ -20,7 +20,8 @@ async def test_get_client_ip_from_header(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.mark.asyncio
-async def test_get_client_ip_ignores_proxy_headers_by_default():
+async def test_get_client_ip_ignores_proxy_headers_by_default(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("TRUST_PROXY_HEADERS", "false")
     app = Quart(__name__)
 
     @app.route('/ip')
