@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Type, Optional, TYPE_CHECKING
 
 from fast_app.application import Application
 from fast_app.core.storage import Storage
-from fast_app.core.storage_drivers import get_builtin_storage_drivers
+from fast_app.core.storage_drivers import DiskDriver
 from fast_app.utils.autodiscovery.event_autodiscovery import autodiscover_events
 from fast_app.utils.autodiscovery.model_autodiscovery import autodiscover_models
 from fast_app.utils.env_utils import configure_env
@@ -74,8 +74,7 @@ def boot(*,
 
     # Configure Storage drivers and disks
     # 1) Register built-in drivers
-    for name, driver_cls in get_builtin_storage_drivers().items():
-        Storage.register_driver(name, driver_cls)
+    Storage.register_driver("disk", DiskDriver)
 
     # 2) Register custom drivers if provided by user
     if storage_custom_drivers:

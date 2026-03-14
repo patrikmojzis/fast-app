@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional, Union, List, IO, Type
 
 from fast_app.contracts.storage_driver import StorageDriver
-from fast_app.core.storage_drivers import get_builtin_storage_drivers
+from fast_app.core.storage_drivers import DiskDriver
 
 
 class Storage:
@@ -58,8 +58,7 @@ class Storage:
 
         # Ensure built-in drivers are available if nothing registered yet
         if not cls._driver_registry:
-            for driver_name, driver_cls in get_builtin_storage_drivers().items():
-                cls.register_driver(driver_name, driver_cls)
+            cls.register_driver("disk", DiskDriver)
 
         if disk_name in cls._driver_instances:
             return cls._driver_instances[disk_name]
