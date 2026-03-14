@@ -5,6 +5,8 @@ from pydantic import BaseModel
 from quart import Quart
 
 import fast_app.core.middlewares.schema_validation_middleware as schema_middleware
+from fast_app import Route
+from fast_app.utils.routing_utils import register_routes
 
 
 class ExampleSchema(BaseModel):
@@ -127,3 +129,23 @@ async def test_handle_routes_methods_to_expected_validator(
 
     assert calls == [(expected_validator, expected_partial, ExampleSchema)]
     assert result == expected_validator
+
+
+@pytest.mark.asyncio
+async def test_schema_handler_cache_does_not_grow_for_reregistered_routes():
+    async def handler(data: ExampleSchema):
+        return data.value
+
+    for idx in range(5):
+        app = Quart(f"schema_cache_app_{idx}")
+        register_routes(app, [Route.get("/items", handler)])
+        view = next(view for name, view in app.view_functions.items() if name != "static")
+
+        async with app.test_request_context("/items?value=hello", method="GET"):
+            response = await view()
+            assert await response.get_json() == "hello"
+
+    info = schema_middleware._resolve_schema_handler.cache_info()
+    assert info.currsize == 1
+    assert info.hits == 4
+    assert info.misses == 1

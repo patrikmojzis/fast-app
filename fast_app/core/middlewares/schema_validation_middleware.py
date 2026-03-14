@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import lru_cache
 from inspect import signature
 from typing import Any, Awaitable, Callable, Optional, Type
 
@@ -8,9 +7,10 @@ from pydantic import BaseModel
 
 from fast_app.contracts.middleware import Middleware
 from fast_app.core.api import validate_query, validate_request
+from fast_app.utils.callable_cache import weak_callable_cache
 
 
-@lru_cache(maxsize=None)
+@weak_callable_cache()
 def _resolve_schema_handler(
     next_handler: Callable[..., Awaitable[Any]],
 ) -> tuple[Optional[str], Optional[Type[BaseModel]]]:
@@ -66,4 +66,3 @@ class SchemaValidationMiddleware(Middleware):
         # Do not remove any existing kwargs; keep composability
 
         return await next_handler(*args, **new_kwargs)
-

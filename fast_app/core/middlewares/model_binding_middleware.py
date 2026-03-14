@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import lru_cache
 from inspect import signature
 from typing import Any, Awaitable, Callable, NamedTuple, Optional, Type, TYPE_CHECKING
 
@@ -8,6 +7,7 @@ from bson import ObjectId
 
 from fast_app.contracts.middleware import Middleware
 from fast_app.exceptions import UnprocessableEntityException
+from fast_app.utils.callable_cache import weak_callable_cache
 from fast_app.utils.model_resolver import resolve_model_annotation
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ class _BindingTarget(NamedTuple):
     accepts_id_key: bool
 
 
-@lru_cache(maxsize=None)
+@weak_callable_cache()
 def _get_binding_plan(
     next_handler: Callable[..., Awaitable[Any]],
 ) -> tuple[_BindingTarget, ...]:
