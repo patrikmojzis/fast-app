@@ -101,18 +101,6 @@ def get_exception_error_type(exception: Exception) -> str:
     return pascal_case_to_snake_case(exception.__class__.__name__.replace('Exception', ''))
 
 
-def remove_suffix(text: str, suffix: str) -> str:
-    """
-    Remove an exact suffix from the given text if present.
-
-    Unlike str.rstrip, this removes only the provided suffix once,
-    not any combination of its characters.
-    """
-    if text.endswith(suffix):
-        return text[: -len(suffix)]
-    return text
-
-
 def safe_int(value: Any, default: int, minimum: int, maximum: int) -> int:
     try:
         iv = int(value)

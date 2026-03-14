@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
 from socketio import AsyncServer, AsyncNamespace
 from typing import Dict, Any, Optional, TYPE_CHECKING, Tuple, Awaitable, Union
-from fast_app.utils.serialisation import pascal_case_to_snake_case, remove_suffix
+from fast_app.utils.serialisation import pascal_case_to_snake_case
 
 if TYPE_CHECKING:
     from fast_app.contracts.broadcast_event import BroadcastEvent
@@ -41,7 +41,7 @@ class Room(ABC):
         """
         Room key is the first part of the room name, e.g. class ChatRoom -> "chat"
         """
-        return remove_suffix(pascal_case_to_snake_case(cls.__name__), "_room")
+        return pascal_case_to_snake_case(cls.__name__).removesuffix("_room")
 
     def get_room_name(self) -> str:
         """
@@ -148,4 +148,3 @@ class Room(ABC):
 
         sio.on(f"join_{cls.get_room_key()}", handle_join, namespace=namespace)
         sio.on(f"leave_{cls.get_room_key()}", handle_leave, namespace=namespace)
-

@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-from fast_app.utils.serialisation import pascal_case_to_snake_case, serialise, remove_suffix
+from fast_app.utils.serialisation import pascal_case_to_snake_case, serialise
 from fast_app.contracts.event import Event
 
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ class BroadcastEvent(Event):
         """
         Set the channel to broadcast the event on.
         """
-        return remove_suffix(pascal_case_to_snake_case(self.__class__.__name__), "_event")
+        return pascal_case_to_snake_case(self.__class__.__name__).removesuffix("_event")
 
     async def broadcast_when(self) -> bool:
         """
