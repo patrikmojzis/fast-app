@@ -6,6 +6,7 @@ from typing import Any, Awaitable, Callable, NamedTuple, Optional, Type, TYPE_CH
 from bson import ObjectId
 
 from fast_app.contracts.middleware import Middleware
+from fast_app.core.model_batch_cache import ModelBatchCache
 from fast_app.exceptions import UnprocessableEntityException
 from fast_app.utils.callable_cache import weak_callable_cache
 from fast_app.utils.model_resolver import resolve_model_annotation
@@ -86,6 +87,7 @@ class ModelBindingMiddleware(Middleware):
 
             # Resolve model instance
             instance = await model_class.find_by_id_or_fail(id_value)
+            ModelBatchCache.prime(model_class, instance._id, instance)
 
             # Inject under the typed parameter name
             updated_kwargs[param_name] = instance

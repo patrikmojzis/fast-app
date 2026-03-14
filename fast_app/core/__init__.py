@@ -29,6 +29,7 @@ from .jwt_auth import (
 )
 from .localization import __, set_locale, get_locale, use_locale, translator, trans, trans_choice
 from .lock import RedisDistributedLock, redis_lock
+from .model_batch_cache import ModelBatchCache
 from .queue import queue
 from .stopwatch import Stopwatch
 from .storage import Storage
@@ -88,4 +89,6 @@ __all__ = [
     # distributed lock
     "RedisDistributedLock",
     "redis_lock",
+    # model batch cache
+    "ModelBatchCache",
 ]

@@ -81,6 +81,7 @@ from .core import (
     Cache,
     RedisDistributedLock,
     redis_lock,
+    ModelBatchCache,
 )
 from .decorators import (
     cached,
@@ -160,6 +161,7 @@ __all__ = [
     "Cache",
     "RedisDistributedLock",
     "redis_lock",
+    "ModelBatchCache",
     # decorators
     "cached",
     "deprecated",

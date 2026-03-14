@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Union, Any, Awaitable, Optional
 
 from quart import jsonify, Response
 
+from fast_app.core.model_batch_cache import ModelBatchCache
 from fast_app.utils.serialisation import serialise
 
 if TYPE_CHECKING:
@@ -30,6 +31,7 @@ class Resource(ABC):
         self._data = data
 
     async def dump(self) -> dict | list[dict] | None:
+        ModelBatchCache.ensure_active()
         data = await self._maybe_await(self._data)
 
         if data is None:

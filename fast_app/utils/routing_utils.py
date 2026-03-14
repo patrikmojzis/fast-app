@@ -4,6 +4,7 @@ from quart import Quart
 
 from fast_app.contracts.middleware import Middleware
 from fast_app.core.middlewares.handle_exceptions_middleware import HandleExceptionsMiddleware
+from fast_app.core.middlewares.model_batch_cache_middleware import ModelBatchCacheMiddleware
 from fast_app.core.middlewares.model_binding_middleware import ModelBindingMiddleware
 from fast_app.core.middlewares.resource_response_middleware import ResourceResponseMiddleware
 from fast_app.core.middlewares.schema_validation_middleware import SchemaValidationMiddleware
@@ -83,6 +84,7 @@ def register_routes(app: Quart, routes: List['Route']) -> None:
 
         all_middlewares: list[Middleware | Type[Middleware] | Callable] = [
             HandleExceptionsMiddleware,
+            ModelBatchCacheMiddleware,
             *pre_binding_middlewares,
             ModelBindingMiddleware,
             *pre_validation_middlewares,

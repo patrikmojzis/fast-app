@@ -9,6 +9,7 @@ from bson import ObjectId
 
 from fast_app.contracts.policy import Policy  # noqa: F401 - used for resolving forward refs in get_type_hints
 from fast_app.core.indexes import Index
+from fast_app.core.model_batch_cache import ModelBatchCache
 from fast_app.database.mongo import get_db
 from fast_app.decorators.db_cache_decorator import cached_db_retrieval
 from fast_app.exceptions.common_exceptions import DatabaseNotInitializedException
@@ -222,6 +223,8 @@ class Model:
         await coll.update_one(query, update_payload)
         await self.refresh()
         await bump_collection_version_async(self.collection_name())
+        ModelBatchCache.clear(self.__class__)
+        ModelBatchCache.prime(self.__class__, self._id, self)
         await self._notify_observer('on_updated')
 
     async def _create(self) -> None:
@@ -237,6 +240,8 @@ class Model:
         self._id = result.inserted_id
         await self.refresh()
         await bump_collection_version_async(self.collection_name())
+        ModelBatchCache.clear(self.__class__)
+        ModelBatchCache.prime(self.__class__, self._id, self)
         await self._notify_observer('on_created')
 
     @classmethod
@@ -256,6 +261,8 @@ class Model:
             for key, value in data.items():
                 setattr(self, key, value)
             self.clean = {}
+        ModelBatchCache.clear(self.__class__)
+        ModelBatchCache.prime(self.__class__, self._id, self)
         return self
 
     @classmethod
@@ -401,7 +408,7 @@ class Model:
     @classmethod
     async def find_by_id(cls: type[T], _id: str | ObjectId) -> Optional[T]:
         object_id = ObjectId(_id) if isinstance(_id, str) else _id
-        return await cls.find_one({'_id': object_id})
+        return await ModelBatchCache.load(cls, object_id)
 
     @classmethod
     async def find(cls: type[T], query: dict[str, Any], **kwargs) -> list[T]:
@@ -425,7 +432,10 @@ class Model:
     @classmethod
     async def find_by_id_or_fail(cls: type[T], _id: str | ObjectId) -> T:
         object_id = ObjectId(_id) if isinstance(_id, str) else _id
-        return await cls.find_or_fail({'_id': object_id})
+        instance = await ModelBatchCache.load(cls, object_id)
+        if not instance:
+            raise ModelNotFoundException(cls.__name__)
+        return instance
 
     @classmethod
     async def exists(cls, query: dict[str, Any]) -> bool:
@@ -452,6 +462,7 @@ class Model:
         final_query = await cls.query_modifier(query, "delete_many", cls.collection_name())
         await coll.delete_many(final_query, **kwargs)
         await bump_collection_version_async(cls.collection_name())
+        ModelBatchCache.clear(cls)
 
     async def delete(self) -> None:
         await self._notify_observer('on_deleting')
@@ -459,6 +470,7 @@ class Model:
         query = await self.query_modifier({'_id': self._id}, "delete", self.collection_name())
         await coll.delete_one(query)
         await bump_collection_version_async(self.collection_name())
+        ModelBatchCache.clear(self.__class__)
         await self._notify_observer('on_deleted')
 
     @classmethod
@@ -468,6 +480,7 @@ class Model:
         update_data = cls._build_update_payload(set_values=data.get("$set"), extra_ops={k: v for k, v in data.items() if k != "$set"}, touch_timestamp=True)
         await coll.update_many(final_query, update_data, **kwargs)
         await bump_collection_version_async(cls.collection_name())
+        ModelBatchCache.clear(cls)
 
     async def update(self, data: dict[str, Any]) -> Self:
         for key, value in data.items():
@@ -481,6 +494,8 @@ class Model:
         await coll.update_one(query, {"$currentDate": {"updated_at": True}})
         await self.refresh()
         await bump_collection_version_async(self.collection_name())
+        ModelBatchCache.clear(self.__class__)
+        ModelBatchCache.prime(self.__class__, self._id, self)
         return self
 
     @classmethod
@@ -501,6 +516,7 @@ class Model:
 
         await (await cls.collection_cls()).insert_many(data)
         await bump_collection_version_async(cls.collection_name())
+        ModelBatchCache.clear(cls)
 
     @classmethod
     async def update_or_create(cls: type[T], query: dict[str, Any], data: dict[str, Any]) -> T:
@@ -601,13 +617,13 @@ class Model:
         child_key: Optional[str] = None,
         is_object_id: bool = True,
     ) -> Optional[TRelated]:
-        parent_model = parent_model
         parent_key = parent_key or '_id'
         child_key = child_key or self._default_relation_child_key(parent_model)
         if getattr(self, child_key, None) is None:
             return None
 
-        return await parent_model.find_one({parent_key: self._get_object_id(child_key) if is_object_id else getattr(self, child_key)})
+        value = self._get_object_id(child_key) if is_object_id else getattr(self, child_key)
+        return await ModelBatchCache.load(parent_model, value, key_field=parent_key)
 
     async def has_one(
         self,
@@ -615,13 +631,12 @@ class Model:
         parent_key: Optional[str] = None,
         child_key: Optional[str] = None,
     ) -> Optional[TRelated]:
-        child_model = child_model
         parent_key = parent_key or '_id'
         child_key = child_key or self._default_relation_child_key(self.__class__)
         if getattr(self, parent_key, None) is None:
             return None
 
-        return await child_model.find_one({child_key: self._get_object_id(parent_key)})
+        return await ModelBatchCache.load(child_model, self._get_object_id(parent_key), key_field=child_key)
 
     async def has_many(
         self,
