@@ -15,6 +15,14 @@ class DirtyTrackedModel(Model):
     }
 
 
+class ReadOnlyPropertyModel(Model):
+    name: str | None = None
+
+    @property
+    def refresh_token(self) -> str:
+        return "issued-token"
+
+
 def test_touch_and_restore_marks_field_pure_but_touched():
     model = DirtyTrackedModel(_id=ObjectId(), name="Alice")
 
@@ -98,4 +106,30 @@ async def test_update_with_no_actual_changes_is_a_noop():
     await model._update()
 
     assert events == []
+    assert model.clean == {}
+
+
+@pytest.mark.asyncio
+async def test_refresh_ignores_unknown_db_fields_that_collide_with_read_only_properties():
+    model = ReadOnlyPropertyModel(_id=ObjectId(), name="Alice")
+
+    class DummyCollection:
+        async def find_one(self, query):
+            assert query == {"_id": model._id}
+            return {
+                "_id": model._id,
+                "name": "Bob",
+                "refresh_token": "legacy-db-token",
+            }
+
+    async def fake_collection():
+        return DummyCollection()
+
+    model.collection = fake_collection
+
+    refreshed = await model.refresh()
+
+    assert refreshed is model
+    assert model.name == "Bob"
+    assert model.refresh_token == "issued-token"
     assert model.clean == {}

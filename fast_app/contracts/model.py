@@ -258,8 +258,10 @@ class Model:
         coll = await self.collection()
         data = await coll.find_one({'_id': self._id})
         if data:
+            model_fields = self.model_fields()
             for key, value in data.items():
-                setattr(self, key, value)
+                if key in model_fields:
+                    super().__setattr__(key, value)
             self.clean = {}
         ModelBatchCache.clear(self.__class__)
         ModelBatchCache.prime(self.__class__, self._id, self)
