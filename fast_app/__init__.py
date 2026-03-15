@@ -15,7 +15,7 @@ This package provides core components commonly used across projects:
 Think of it as a Laravel-inspired package for Python applications.
 """
 
-__version__ = "0.3.2"
+__version__ = "0.4.0"
 __author__ = "Patrik Mojzis"
 __email__ = "patrikm53@gmail.com"
 __license__ = "MIT"
